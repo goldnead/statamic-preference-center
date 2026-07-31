@@ -1,5 +1,107 @@
 # Changelog
 
+## 1.2.0 — 2026-07-31
+
+One finding from a real end-to-end run on staging: a magic link requested there, mailed by Brevo, read
+in a real mailbox, and the button clicked the way a recipient clicks it. **HTTP 403.** Not a defect in
+the signature and not a defect in the mail — a defect in the delivery chain, which is the one place
+this suite could not reach.
+
+### Fixed — a click counter appended one parameter and the link stopped working
+
+**What was possible: nothing, again, for whoever clicks the button.** The redirect chain, as captured:
+
+```
+302  https://fbjicab.r.bh.d.sendibt3.com/tr/cl/…                       Brevo's click counter
+403  https://staging.adriangoldner.com/!/preference-center/link/…
+     ?_se=aW5mbyt0ZXN0QGFkcmlhbmdvbGRuZXIuY29t&expires=…&signature=…
+```
+
+Brevo rewrites every `href` in the HTML part onto its own counter, and when the counter forwards the
+reader it appends `_se` — the recipient address in base64, inserted **in front of** `expires` and
+`signature`. Laravel signs the whole query string. One extra parameter changes what is verified, and
+`ValidateSignature` answers 403 before this package sees the request. The plain-text link in the same
+message, which Brevo leaves alone, worked throughout. This is not specific to this addon: **a
+provider that counts clicks breaks every signed Laravel URL it is asked to deliver.**
+
+**Why nothing local could have found it, and why it took a real send.** Every test in this package
+follows the link out of the rendered body — that check was written in 1.1.0 precisely because
+"contains a URL" had been true while the URL was broken. It follows the link the *sink* stored. A
+mail sink stores what it was handed; that is what makes it a sink. Mailpit does not rewrite `href`s,
+`Mail::fake()` does not build a MIME message at all, and neither of them owns a click counter.
+Nothing short of a message through a real provider, opened from a real mailbox, produces the URL that
+actually arrives. The gap was not in the assertions. It was in the last hop, and the only instrument
+that reaches it is a send.
+
+**Two answers, and a host wants both.**
+
+*Stop the rewriting.* `delivery.mail_headers` is a map of headers added verbatim to the outgoing
+message, so the package presumes no provider and a host can name its own: `X-Mailgun-Track-Clicks:
+no`, `X-PM-TrackLinks: None`, `X-Mailjet-TrackClick: 0`, `X-MSYS-API`, `X-SMTPAPI`, `X-MC-Track` —
+the table with each vendor's exact value, checked against each vendor's own documentation, is in the
+config file. A magic link is transactional; nobody wants a click rate for it, and a link nobody
+touched cannot be broken. Empty by default: an addon that guessed the provider and changed how it
+behaves would be the worse neighbour.
+
+**Brevo has no such header, and that was checked rather than assumed.** The brief for this change
+said one existed and to verify it in Brevo's documentation instead of guessing. It does not.
+`X-Mailin-custom`, `X-Sib-Sandbox` and `X-SIB-API` are the documented ones and none of them touches
+tracking; the transactional API has no tracking option in its body either; Brevo has declined the
+request for years in its own community forum, and Anymail's provider matrix records the same in one
+sentence: "Brevo does not provide a way to control open or click tracking for individual messages."
+The account-level setting Brevo does offer anonymises the tracking, it does not stop the rewriting.
+So on Brevo the second answer is not defence in depth. It is the only thing that works.
+
+*Survive the rewriting.* `delivery.ignored_query_parameters` names the parameters left out of the
+signature check. Ignoring is giving away, so what is given away is stated rather than glossed:
+
+- The **payload is in the path**, not the query. `/link/{pcLink}` carries an encrypted blob and the
+  address and brand come out of `LinkTokenizer`; the path stays inside the signed string. The query
+  of this URL carries `expires` and `signature` and nothing else — there is no third thing in it to
+  protect.
+- **`expires` stays signed**, and cannot be unsigned by editing a config file. `TrackingParameters`
+  strips `expires` and `signature` out of whatever a host lists. A host who ignored `expires` would
+  still have expiry *checked* — `signatureHasNotExpired()` reads it either way — and would have
+  handed out the right to *choose its value*, turning a thirty-minute link into a permanent one. This
+  package has no token table, so the lifetime is the whole revocation story.
+- The list is **a list, not a rule**. Each entry names the provider that adds it: `_se` (Brevo, the
+  one that was measured), the five `utm_*` (Brevo's Google-Analytics tagging and the same switch in
+  Mailchimp, Mailjet, Postmark), `mc_cid`/`mc_eid` (Mailchimp), `_hsenc`/`_hsmi` (HubSpot),
+  `mkt_tok` (Marketo). `gclid` and `fbclid` are deliberately absent: an ad network is not on the path
+  from a mail to this route, and a list that grows by association is how one ends up ignoring the
+  wrong thing.
+
+### Notes
+
+- Suite: **93 passed, 372 assertions** (80/329 before), SQLite in memory; `DB_DRIVER=mysql` runs the
+  identical suite against a real server.
+- Removal proof, by stash: config, route and mailable taken back out, the two new test files left in
+  place. **9 of 13 new cases turned red** — the two that open a rewritten link, the one that lets a
+  rewritten link expire, the three that pin `TrackingParameters`, and the three `mail_headers` cases.
+  The remaining four went green in both directions, and that is the point of them: an unnamed
+  parameter, an edited payload, an edited signature and a moved `expires` are refused with the change
+  and without it. They are not evidence for the fix. They are the fence around it, and a fence that
+  only stands after the change would not be one.
+- Config: two new keys under `delivery`. A host that publishes the config file gets the defaults on
+  the next publish; a host that does not gets them from `mergeConfigFrom`. No migration, no other
+  behaviour change.
+- The three limits from L15 were re-checked on the hub after this change, with the hidden fields
+  stripped from the submission: cell states unchanged, zero notification channels switched on, the
+  subscription untouched, the suppression row unreleased. This change touches the signature check of
+  one route and the headers of one mail; the limits live in the write path and were not near it.
+- **`statamic-marketing` is affected the same way, and was not changed here.** Measured on the hub,
+  not inferred: `marketing.confirm` and `marketing.unsubscribe` carry an unguessable token in the
+  path with no signature and survive an appended parameter untouched (HTTP 200 with and without).
+  `marketing.track.click` is built exactly like this route — `'signed'` middleware plus
+  `URL::signedRoute`, with the destination in the query — and behaves exactly like it did: without a
+  signature 403, with a valid signature not 403, with a valid signature plus `_se` **403 again**. On
+  a Brevo-delivered campaign that is every tracked link, and the click is not recorded either, since
+  the middleware refuses before the controller runs. Reported, with the file and line, for a decision
+  in that package.
+- Verified on the QA hub in the area `preference-center-esp`, the same measurement twice against the
+  same seed: the button's URL, rebuilt the way Brevo forwards it, **403 → 200**, while the identical
+  URL without the parameter answered 200 in both phases; and the four refusals **403 → 403**.
+
 ## 1.1.0 — 2026-07-31
 
 Seven findings from an independent acceptance of 1.0.0, written by an agent that did not build it.

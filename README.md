@@ -130,6 +130,42 @@ own fault.
   directions and both are right — see the note in each template, and the tests that follow the link
   out of each body rather than reading it.
 
+### What a click counter does to it, and what this package does about that
+
+A signed URL survives the post and does not always survive the courier. Providers that count clicks
+rewrite every `href` in the HTML part onto their own redirector and append their own parameters when
+they forward the reader — Brevo appends `_se`, the recipient address in base64. Laravel signs the
+whole query string, so the URL that arrives is not the URL that was signed and the answer is **403**.
+Measured on staging over a real Brevo send, on a link that passed the whole test suite:
+`302 …sendibt3.com/tr/cl/… → 403 …/link/…?_se=…&expires=…&signature=…`. The plain-text link in the
+same message, which Brevo leaves alone, worked. Nothing local can find this: no mail sink rewrites
+links, which is exactly what makes a sink a sink.
+
+Two answers, and a host wants both.
+
+- **`delivery.mail_headers` — stop the rewriting.** Most providers take a per-message header that
+  turns click tracking off for that one message, which is the right setting for a link that is
+  transactional and has no click rate anybody wants. Whatever is in the map is added to the outgoing
+  message verbatim, so this package presumes no provider: `X-Mailgun-Track-Clicks: no`,
+  `X-PM-TrackLinks: None`, `X-Mailjet-TrackClick: 0`, `X-MSYS-API`, `X-SMTPAPI`, `X-MC-Track` — the
+  table with the exact values is in the config file. Empty by default; an addon that guessed your
+  provider and changed how it behaves would be the worse neighbour.
+
+  **Brevo has no such header**, and that is not an oversight in this README. `X-Mailin-custom`,
+  `X-Sib-Sandbox` and `X-SIB-API` are the documented ones and none of them touches tracking; the
+  transactional API has no tracking option in its body either; Brevo has declined the request for
+  years in its own community forum. On Brevo the ignore list below is not defence in depth, it is the
+  only thing that works.
+
+- **`delivery.ignored_query_parameters` — survive it.** These names are left out of the signature
+  check, so a rewritten link still opens. Ignoring is giving away, so the list is short, every entry
+  names the provider that adds it, and two names can never be on it: `expires` and `signature` are
+  stripped out by `TrackingParameters` however the config is edited. What that leaves is bounded on
+  purpose — the payload of a magic link is **encrypted into the path**, not the query, so there is
+  nothing in the query for this route to protect except its lifetime, and its lifetime stays signed.
+  A parameter nobody named is still refused, an edited payload is still refused, and a link past its
+  time is still refused, each with a test that says so.
+
 ### What following one does to the session
 
 The link is spent on arrival and leaves a short-lived note in the session, with its own expiry. Two
@@ -234,6 +270,8 @@ See `config/preference-center.php`. The values worth knowing:
 | `magic_link.min_response_ms` | `350` | The floor under a link request. Raise it above your mailer's latency |
 | `magic_link.throttle.*` | 3/hour per address, 10/hour per origin | |
 | `magic_link.allow_unknown_addresses` | `false` | Leave it off unless nobody is known yet |
+| `delivery.mail_headers` | `[]` | Per-message headers that tell your provider not to rewrite the links. Verified values per provider in the config file |
+| `delivery.ignored_query_parameters` | `_se`, the five `utm_*`, `mc_cid`, `mc_eid`, `_hsenc`, `_hsmi`, `mkt_tok` | Left out of the signature check because a provider appends them. `expires` and `signature` cannot be added |
 | `audit.log_channel` | default channel | |
 
 ## Tests

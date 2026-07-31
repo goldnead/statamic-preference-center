@@ -4,6 +4,7 @@ use Goldnead\BrandContext\Http\Middleware\SetBrandFromRouteValue;
 use Goldnead\PreferenceCenter\Http\Controllers\MagicLinkController;
 use Goldnead\PreferenceCenter\Http\Controllers\PreferenceCenterController;
 use Goldnead\PreferenceCenter\Http\Middleware\SetBrandFromLinkSession;
+use Goldnead\PreferenceCenter\MagicLink\TrackingParameters;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Support\Facades\Route;
@@ -35,9 +36,15 @@ Route::prefix(config('preference-center.routes.prefix', '!/preference-center'))
         Route::post('/request', [MagicLinkController::class, 'send'])
             ->name('preference-center.request.send');
 
+        // The signature is checked while overlooking the parameters a mail
+        // service provider appends on the way here — Brevo's `_se` and its
+        // relatives, each named in `delivery.ignored_query_parameters` with the
+        // provider that adds it. `TrackingParameters` says what that costs and
+        // why it is affordable on this route and nowhere else; the short version
+        // is that the payload is in the path and `expires` stays signed.
         Route::get('/link/{pcLink}', [MagicLinkController::class, 'open'])
             ->name('preference-center.link')
-            ->middleware(ValidateSignature::class);
+            ->middleware(ValidateSignature::absolute(TrackingParameters::ignored()));
 
         // The session entrance: a followed magic link, or an authenticated user.
         Route::get('/', [PreferenceCenterController::class, 'show'])

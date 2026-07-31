@@ -3,6 +3,7 @@
 namespace Goldnead\PreferenceCenter\MagicLink;
 
 use Illuminate\Mail\Mailable;
+use Symfony\Component\Mime\Email;
 
 /**
  * The one mail this package sends.
@@ -41,6 +42,25 @@ class MagicLinkMail extends Mailable
 
         if (! empty($from['address'])) {
             $this->from($from['address'], $from['name'] ?: null);
+        }
+
+        // Whatever the host's provider needs in order to leave the links alone.
+        // Set here rather than in a `headers()` method because the value is a
+        // configured map of arbitrary names, and `Headers` only carries the
+        // three Laravel knows about. See `delivery.mail_headers` for the table
+        // of providers and the one that has no such header at all.
+        $headers = array_filter(
+            (array) config('preference-center.delivery.mail_headers', []),
+            fn ($value, $name) => is_string($name) && $name !== '' && (is_string($value) || is_numeric($value)),
+            ARRAY_FILTER_USE_BOTH,
+        );
+
+        if ($headers !== []) {
+            $this->withSymfonyMessage(function (Email $message) use ($headers) {
+                foreach ($headers as $name => $value) {
+                    $message->getHeaders()->addTextHeader($name, (string) $value);
+                }
+            });
         }
 
         return $this

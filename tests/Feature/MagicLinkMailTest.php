@@ -102,6 +102,55 @@ it('puts a link in the HTML body that actually opens', function () {
         ->assertSee('data-proof="magic_link"', false);
 });
 
+it('carries the headers a host configured to keep the provider off the links', function () {
+    // The other half of the click-tracking answer, and the one that fixes the
+    // cause rather than surviving it: most providers take a per-message header
+    // that stops them rewriting `href`s at all. The package names no provider —
+    // whatever is in the map goes on the message verbatim.
+    config()->set('preference-center.delivery.mail_headers', [
+        'X-Mailgun-Track-Clicks' => 'no',
+        'X-PM-TrackLinks' => 'None',
+        'X-Mailjet-TrackClick' => 0,
+    ]);
+
+    $this->post(route('preference-center.request.send'), ['email' => 'jane@example.com']);
+
+    $headers = sentMessage()->getHeaders();
+
+    expect($headers->get('X-Mailgun-Track-Clicks')?->getBodyAsString())->toBe('no')
+        ->and($headers->get('X-PM-TrackLinks')?->getBodyAsString())->toBe('None')
+        ->and($headers->get('X-Mailjet-TrackClick')?->getBodyAsString())->toBe('0');
+});
+
+it('adds no headers of its own when none were configured', function () {
+    // The default is empty on purpose. An addon that guessed the provider and
+    // changed how it behaves would be a worse neighbour than one that asks.
+    expect(config('preference-center.delivery.mail_headers'))->toBe([]);
+
+    $this->post(route('preference-center.request.send'), ['email' => 'jane@example.com']);
+
+    $names = array_map('strtolower', sentMessage()->getHeaders()->getNames());
+
+    expect(array_filter($names, fn ($n) => str_starts_with($n, 'x-')))->toBe([]);
+});
+
+it('ignores a configured header that could not be written', function () {
+    config()->set('preference-center.delivery.mail_headers', [
+        'X-Mailgun-Track-Clicks' => 'no',
+        'X-Broken' => ['array'],
+        '' => 'nameless',
+        'X-Also-Broken' => null,
+    ]);
+
+    $this->post(route('preference-center.request.send'), ['email' => 'jane@example.com']);
+
+    $headers = sentMessage()->getHeaders();
+
+    expect($headers->get('X-Mailgun-Track-Clicks')?->getBodyAsString())->toBe('no')
+        ->and($headers->has('X-Broken'))->toBeFalse()
+        ->and($headers->has('X-Also-Broken'))->toBeFalse();
+});
+
 it('is still clickable when one address belongs to more than one brand', function () {
     $this->enableMultiBrand();
     $this->makeBrand('default', 'Default');
