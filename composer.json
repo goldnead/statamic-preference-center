@@ -1,0 +1,116 @@
+{
+    "name": "goldnead/statamic-preference-center",
+    "description": "One page for everything a person receives — mailing lists, product notifications, cadence and the blocks that override all three — assembled from whichever of the three sources is installed.",
+    "type": "statamic-addon",
+    "license": "MIT",
+    "keywords": [
+        "statamic",
+        "statamic-addon",
+        "preferences",
+        "consent",
+        "unsubscribe",
+        "magic-link"
+    ],
+    "authors": [
+        {
+            "name": "Adrian Goldner",
+            "email": "info@adriangoldner.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/goldnead/statamic-preference-center/issues",
+        "source": "https://github.com/goldnead/statamic-preference-center"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-brand-context.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-identity-contracts.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-suppression.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-leadhub.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-marketing.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/goldnead/statamic-notifications.git"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "goldnead/statamic-brand-context": "^1.4|^1.5",
+        "goldnead/statamic-identity-contracts": "^1.0",
+        "laravel/framework": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "goldnead/statamic-leadhub": "^1.10",
+        "goldnead/statamic-marketing": "^1.8.1",
+        "goldnead/statamic-notifications": "^1.1",
+        "goldnead/statamic-suppression": "^1.0",
+        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "pestphp/pest": "^2.0|^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0|^4.0",
+        "statamic/cms": "^6.0"
+    },
+    "suggest": {
+        "goldnead/statamic-marketing": "Adds the mailing-list block. Without it the page still renders the other two.",
+        "goldnead/statamic-notifications": "Adds the product-notification matrix and the cadence block.",
+        "goldnead/statamic-suppression": "Adds the block state. Without it nothing is reported as blocked — install it before you trust the page.",
+        "goldnead/statamic-leadhub": "Lets a magic link and a session resolve to a contact, and records the audit trail on the contact timeline.",
+        "statamic/cms": "Required only when the host application is a Statamic site."
+    },
+    "autoload": {
+        "psr-4": {
+            "Goldnead\\PreferenceCenter\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Goldnead\\PreferenceCenter\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Preference Center",
+            "description": "One page for lists, product notifications, cadence and blocks."
+        },
+        "laravel": {
+            "providers": [
+                "Goldnead\\PreferenceCenter\\ServiceProvider"
+            ],
+            "aliases": {
+                "PreferenceCenter": "Goldnead\\PreferenceCenter\\Facades\\PreferenceCenter"
+            }
+        }
+    },
+    "scripts": {
+        "test": [
+            "@php vendor/bin/pest"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "pixelfear/composer-dist-plugin": true,
+            "composer/installers": true,
+            "php-http/discovery": true
+        },
+        "preferred-install": {
+            "goldnead/*": "source"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
