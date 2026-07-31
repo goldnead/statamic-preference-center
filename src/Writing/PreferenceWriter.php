@@ -40,9 +40,13 @@ class PreferenceWriter
         $view = $this->center->view($access);
         $result = new WriteResult;
 
+        // Order is the whole rule for the two that overlap: the cadence writes
+        // every optional mail-bearing cell, then the matrix writes the cells
+        // this submission actually changed. Last write wins, and the last write
+        // is the specific one. See `saveTypes()`.
         $this->saveLists($access, $view, $result, $input['lists'] ?? null);
-        $cadenceApplied = $this->saveFrequency($access, $view, $result, $input['frequency'] ?? null);
-        $this->saveTypes($access, $view, $result, $input['types'] ?? null, $cadenceApplied);
+        $this->saveFrequency($access, $view, $result, $input['frequency'] ?? null);
+        $this->saveTypes($access, $view, $result, $input['types'] ?? null);
 
         $this->announce($access, $result);
 
@@ -129,35 +133,33 @@ class PreferenceWriter
      * control: it writes the mail and digest channel of every optional type at
      * once. Running it on an unchanged value would flatten a matrix the visitor
      * had just tuned by hand.
-     *
-     * @return bool  whether the cadence rewrote the mail-bearing channels
      */
-    protected function saveFrequency(Access $access, PreferenceView $view, WriteResult $result, ?string $wanted): bool
+    protected function saveFrequency(Access $access, PreferenceView $view, WriteResult $result, ?string $wanted): void
     {
         if ($wanted === null) {
-            return false;
+            return;
         }
 
         if (! $view->hasFrequency()) {
             $result->refused('frequency', 'source_absent');
 
-            return false;
+            return;
         }
 
         if (! Frequency::isKnown($wanted)) {
             $result->refused('frequency', 'unknown');
 
-            return false;
+            return;
         }
 
         if ($wanted === $view->frequency) {
-            return false;
+            return;
         }
 
         if (! $access->canStoreNotificationPreferences()) {
             $result->refused('frequency', NotificationsSource::LOCK_UNIDENTIFIED);
 
-            return false;
+            return;
         }
 
         // A blocked address cannot be moved onto a cadence that means more mail.
@@ -165,13 +167,12 @@ class PreferenceWriter
         if ($view->suppression->blocksMail() && $wanted !== Frequency::NEVER) {
             $result->refused('frequency', NotificationsSource::LOCK_BLOCKED);
 
-            return false;
+            return;
         }
 
         $state = Frequency::toChannelState($wanted);
         $optional = array_filter($view->types ?? [], fn (TypeRow $row) => ! $row->required);
         $channels = $view->mailChannels();
-        $touched = false;
 
         foreach ($optional as $row) {
             foreach ($channels as $channel) {
@@ -179,25 +180,33 @@ class PreferenceWriter
                 $frequency = $channel === 'digest' ? $state['digest_frequency'] : null;
 
                 $this->center->notifications->set($access, $row->type, $channel, $enabled, $frequency);
-                $touched = true;
             }
         }
 
         $result->changed('frequency', 'digest', $wanted);
-
-        return $touched;
     }
 
     /**
      * The type-by-channel matrix.
      *
+     * Every cell that reaches a write here is a cell whose posted value differs
+     * from the value that was rendered — the loop skips the rest — which makes
+     * this list exactly the set of boxes somebody clicked. That is why it runs
+     * after the cadence and is allowed to overwrite it: a submission carrying
+     * `immediate` *and* one cleared checkbox is a person who chose both, and the
+     * specific instruction is the one they will check afterwards.
+     *
+     * v1.0.0 read it the other way round. It treated the whole matrix as stale
+     * once the cadence had run and skipped those cells, so a cleared box came
+     * back on with no refusal, no notice and no trace — the one outcome a
+     * preference page must never produce, and the opposite of what the README
+     * promised. The stale-state worry it came from is real and is answered by
+     * the comparison, not by a blanket skip: an untouched cell equals what was
+     * rendered, so the loop never reaches it and the cadence's write stands.
+     *
      * @param  array<string,array<string,mixed>>|null  $posted
-     * @param  bool  $cadenceApplied  when true the cadence has just written every
-     *                                mail-bearing channel, so the checkbox state
-     *                                that was rendered before it is stale and
-     *                                those cells are left alone.
      */
-    protected function saveTypes(Access $access, PreferenceView $view, WriteResult $result, ?array $posted, bool $cadenceApplied): void
+    protected function saveTypes(Access $access, PreferenceView $view, WriteResult $result, ?array $posted): void
     {
         if ($posted === null) {
             return;
@@ -230,10 +239,6 @@ class PreferenceWriter
                 if ($row->isLocked($channel)) {
                     $result->refused('types.'.$row->type.'.'.$channel, (string) $row->reason($channel));
 
-                    continue;
-                }
-
-                if ($cadenceApplied && in_array($channel, Frequency::MAIL_CHANNELS, true) && ! $row->required) {
                     continue;
                 }
 

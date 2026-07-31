@@ -51,7 +51,10 @@ it('bounds its own cache keys the same way', function () {
     $service = new ReflectionClass(\Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests::class);
     $source = file_get_contents($service->getFileName());
 
-    expect($source)->toContain("hash('sha256', \$brandId.'|'.\$email)")
+    // The address and nothing else: a mailbox is one mailbox however many
+    // brands a host runs, and the brand that used to be in this key gave every
+    // one of them its own budget.
+    expect($source)->toContain("hash('sha256', \$email)")
         ->and($source)->toContain("hash('sha256', \$origin)");
 });
 

@@ -42,16 +42,22 @@ class MagicLinkController extends Controller
 
         $started = microtime(true);
 
-        $this->applyBrand($request);
+        $named = $this->applyBrand($request);
 
         // Not `email` validation on the request: a rejected field would answer
         // faster and differently than an accepted one, and the shape of an
         // address is the one thing about it we are willing to reveal. Malformed
         // input takes the same path and gets the same page.
+        //
+        // The brand passed on is the one the visitor *named*, or null. Not
+        // `currentId()`: that answers with the default brand whether anybody
+        // chose it or not, and a service that cannot tell "this brand" from "no
+        // brand was mentioned" has to guess. It guessed wrong for a whole
+        // release — see `MagicLinkRequests::brandsToSearch()`.
         $outcome = $this->requests->request(
             is_string($request->input('email')) ? $request->input('email') : null,
             (string) $request->ip(),
-            (int) app('brand-context')->currentId(),
+            $named?->id,
         );
 
         $this->holdOpen($started);
@@ -62,22 +68,23 @@ class MagicLinkController extends Controller
     }
 
     /**
-     * Which brand this request page belongs to.
+     * Which brand this request page belongs to, if it was told.
      *
-     * Every other public entrance derives its brand from something the visitor
-     * could not have chosen — a token, a signature. This one has nothing to
-     * derive from: an address is not yet known to belong anywhere, and that is
-     * the question being asked. So on a multi-brand host the page has to be
-     * told, and `pcBrand` is how.
+     * `pcBrand` is a hint and nothing more. A site that runs one brand of a
+     * multi-brand host links to this page with its own handle, and then the
+     * request searches that audience only. Left out — which is what the form
+     * itself does, because it has no brand field — the address decides which
+     * brands are searched. The reasoning for that lives at the one place that
+     * acts on it, `MagicLinkRequests::brandsToSearch()`.
      *
-     * It is safe to let a visitor name it, and it is not a hole for the same
-     * reason the rest of this endpoint is not one: the answer is the same
-     * sentence whichever brand is named, and whether the brand exists at all.
-     * Naming a brand changes which audience is searched and which brand the
-     * link opens — never whether anything is revealed.
+     * It is safe to let a visitor name a brand for the same reason the rest of
+     * this endpoint is safe: the answer is the same sentence whichever brand is
+     * named, and whether the brand exists at all. Naming one changes which
+     * audience is searched and which brand a link opens — never whether
+     * anything is revealed.
      *
      * Like `SetBrandFromRouteValue`, an unknown handle aborts nothing. It finds
-     * no brand, the current one stays, and the page behaves as it would have.
+     * no brand, and the page behaves exactly as it would have without the hint.
      */
     protected function requestedBrand(Request $request): ?string
     {
@@ -86,13 +93,14 @@ class MagicLinkController extends Controller
         return is_string($handle) && $handle !== '' ? $handle : null;
     }
 
-    protected function applyBrand(Request $request): void
+    /** @return \Goldnead\BrandContext\Models\Brand|null  the brand that was named and found */
+    protected function applyBrand(Request $request): ?\Goldnead\BrandContext\Models\Brand
     {
         $manager = app('brand-context');
         $handle = $this->requestedBrand($request);
 
         if ($handle === null || ! $manager->multiBrandEnabled()) {
-            return;
+            return null;
         }
 
         $brand = \Goldnead\BrandContext\Models\Brand::query()->where('handle', $handle)->first();
@@ -100,6 +108,8 @@ class MagicLinkController extends Controller
         if ($brand !== null) {
             $manager->setCurrent($brand);
         }
+
+        return $brand;
     }
 
     public function open(Request $request, string $pcLink)

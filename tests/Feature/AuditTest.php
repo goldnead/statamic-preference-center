@@ -40,7 +40,7 @@ it('names the magic link when a magic link is what got in', function () {
 
     $url = null;
     Mail::assertSent(MagicLinkMail::class, function ($mail) use (&$url) {
-        $url = $mail->url;
+        $url = $mail->url();
 
         return true;
     });

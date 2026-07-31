@@ -102,6 +102,24 @@ abstract class TestCase extends OrchestraTestCase
             foreach (static::NAMES_A_SIBLING_MIGHT_USE as $name) {
                 $router->get('sibling-probe/'.$name.'/{'.$name.'}', fn ($value) => (string) $value);
             }
+
+            // The host's login form, stood in for. `actingAs()` cannot play this
+            // part: it installs a user without ever firing `Login`, and the
+            // event is the entire subject of `SessionFixationTest`. What matters
+            // here is that a real `SessionGuard::login()` runs — including its
+            // own session migration, which is why that test follows the cookie
+            // the response hands back rather than the one it sent.
+            $router->get('pc-test/sign-in', function () {
+                \Illuminate\Support\Facades\Auth::login(
+                    new \Goldnead\PreferenceCenter\Tests\Fixtures\FixtureUser([
+                        'id' => 8100,
+                        'email' => 'the-account@example.com',
+                        'name' => 'The Account',
+                    ])
+                );
+
+                return 'signed in';
+            });
         });
     }
 

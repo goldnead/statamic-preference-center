@@ -1,5 +1,7 @@
 <?php
 
+use Goldnead\BrandContext\Models\Brand;
+use Goldnead\PreferenceCenter\MagicLink\LinkTokenizer;
 use Goldnead\PreferenceCenter\MagicLink\MagicLinkMail;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
 use Goldnead\Suppression\Reasons;
@@ -19,6 +21,34 @@ beforeEach(function () {
     World::subscriber('jane@example.com', ['newsletter'], $this->lists);
     Mail::fake();
 });
+
+/** Every link of the one mail that was sent. */
+function sentLinks(): array
+{
+    $links = [];
+
+    Mail::assertSent(MagicLinkMail::class, function ($mail) use (&$links) {
+        $links = $links ?: $mail->links;
+
+        return true;
+    });
+
+    return $links;
+}
+
+/** The first link of the first mail. */
+function sentLink(): string
+{
+    return sentLinks()[0]['url'] ?? '';
+}
+
+/** Which brand a link was sealed for. Read out of the link, not out of a fixture. */
+function brandOfLink(string $url): ?int
+{
+    $blob = preg_match('#/link/([^?]+)#', $url, $m) ? $m[1] : '';
+
+    return app(LinkTokenizer::class)->open($blob)['brand'] ?? null;
+}
 
 /** The page a request lands on, with the one value that legitimately varies removed. */
 function neutralBody(string $html): string
@@ -124,7 +154,7 @@ it('opens the page, and stops opening it once the link has expired', function ()
 
     $url = null;
     Mail::assertSent(MagicLinkMail::class, function ($mail) use (&$url) {
-        $url = $mail->url;
+        $url = $mail->url();
 
         return true;
     });
@@ -151,7 +181,7 @@ it('refuses a link whose payload was edited', function () {
 
     $url = null;
     Mail::assertSent(MagicLinkMail::class, function ($mail) use (&$url) {
-        $url = $mail->url;
+        $url = $mail->url();
 
         return true;
     });
@@ -170,10 +200,17 @@ it('will not mail a link to an address this installation has never seen', functi
     Mail::assertNothingSent();
 });
 
-it('searches the brand it was told to, and says the same thing either way', function () {
-    // Every other public entrance derives its brand from something the visitor
-    // could not choose. This one has nothing to derive from — an address is not
-    // yet known to belong anywhere, which is the question being asked.
+/**
+ * A brand nobody named.
+ *
+ * The form has two fields, `_token` and `email`, and that is the whole shape of
+ * the problem: on a multi-brand host nothing establishes a brand, the scope
+ * fails closed, and v1.0.0 answered `known() === false` for every address ever
+ * typed into it. The page says the same reassuring sentence whatever happened,
+ * so a total outage looked exactly like a working form — measured on the QA hub
+ * as 0 mails without `pcBrand` and 1 with it, for the same address.
+ */
+it('finds an address in whichever brand actually has it, with no brand named', function () {
     $this->enableMultiBrand();
     $this->makeBrand('default', 'Default');
     $this->makeBrand('second', 'Second');
@@ -185,13 +222,16 @@ it('searches the brand it was told to, and says the same thing either way', func
 
     app('brand-context')->forget();
 
-    // Without the hint the default brand is searched, and this address is not
-    // in it. Same page, no mail.
     $without = $this->followingRedirects()
         ->post(route('preference-center.request.send'), ['email' => 'only-in-second@example.com'])
         ->assertOk();
 
-    Mail::assertNothingSent();
+    // Nobody named a brand, and the address still got its link — for the brand
+    // that actually has it, not for the one that happened to be current.
+    Mail::assertSent(MagicLinkMail::class, 1);
+
+    expect(brandOfLink(sentLink()))
+        ->toBe(Brand::query()->where('handle', 'second')->first()->id);
 
     $this->flushSession();
 
@@ -202,18 +242,42 @@ it('searches the brand it was told to, and says the same thing either way', func
         ])
         ->assertOk();
 
-    Mail::assertSent(MagicLinkMail::class, 1);
+    Mail::assertSent(MagicLinkMail::class, 2);
 
-    // And the page said the same thing both times — the hint changes which
-    // audience is searched, never what is revealed.
+    // And the page said the same thing both times — naming a brand changes
+    // which audience is searched, never what is revealed.
     expect(neutralBody($with->getContent()))->toContain(__('preference-center::public.magic_link_sent'))
         ->and(neutralBody($without->getContent()))->toContain(__('preference-center::public.magic_link_sent'));
+});
+
+it('narrows to the brand it was told, and treats an unknown handle as no hint at all', function () {
+    $this->enableMultiBrand();
+    $this->makeBrand('default', 'Default');
+    $this->makeBrand('second', 'Second');
+
+    $this->inBrand('second', function () {
+        $lists = World::lists(['second-newsletter']);
+        World::subscriber('only-in-second@example.com', ['second-newsletter'], $lists);
+    });
+
+    app('brand-context')->forget();
+
+    // A named brand that does not have this address gets nothing. The hint can
+    // narrow the search; it cannot widen it, and it cannot make a link for a
+    // brand the address does not belong to.
+    $this->post(route('preference-center.request.send'), [
+        'email' => 'only-in-second@example.com',
+        'pcBrand' => 'default',
+    ])->assertRedirect();
+
+    Mail::assertNothingSent();
 
     $this->flushSession();
     app('brand-context')->forget();
 
-    // A brand nobody has aborts nothing: it finds none, the current one stays,
-    // and the page behaves exactly as it would have without the hint.
+    // A brand nobody has aborts nothing. It finds none, and the page behaves
+    // exactly as it would have without the hint — which now means the address
+    // is looked for where it might be.
     $this->post(route('preference-center.request.send'), [
         'email' => 'only-in-second@example.com',
         'pcBrand' => 'no-such-brand',
@@ -222,30 +286,66 @@ it('searches the brand it was told to, and says the same thing either way', func
     Mail::assertSent(MagicLinkMail::class, 1);
 });
 
-it('puts a link in the mail that actually opens', function () {
-    // Not "contains a URL". The exact URL, character for character, and then
-    // followed. Blade escapes by default, and a plain-text body has no HTML
-    // context to escape into: the `&` before `signature` became `&amp;`, the
-    // link read perfectly to a human, and Laravel answered 403 because the
-    // signature no longer matched. Found on the QA hub, not in this suite —
-    // which is why the assertion now follows the link rather than reading it.
-    Mail::fake();
-    $this->post(route('preference-center.request.send'), ['email' => 'jane@example.com']);
+it('sends one mail with one link per brand, not one mail per brand', function () {
+    // A mailbox is one mailbox. Two brands that both know this address are not
+    // a reason to write to it twice, and the per-address limiter counts
+    // requests rather than brands, so it would not have caught it either.
+    $this->enableMultiBrand();
+    $this->makeBrand('default', 'Default');
+    $this->makeBrand('second', 'Second');
 
-    $mail = null;
-    Mail::assertSent(MagicLinkMail::class, function ($sent) use (&$mail) {
-        $mail = $sent;
+    foreach (['default', 'second'] as $handle) {
+        $this->inBrand($handle, function () use ($handle) {
+            $lists = World::lists([$handle.'-news']);
+            World::subscriber('in-both@example.com', [$handle.'-news'], $lists);
+        });
+    }
 
-        return true;
-    });
+    app('brand-context')->forget();
 
-    $body = $mail->render();
+    $this->post(route('preference-center.request.send'), ['email' => 'in-both@example.com']);
 
-    expect($body)->toContain($mail->url)
-        ->and($body)->not->toContain('&amp;');
+    Mail::assertSent(MagicLinkMail::class, 1);
 
-    $fromTheMail = preg_match('#(https?://\S*preference-center/link/\S+)#', $body, $m) ? rtrim($m[1]) : null;
+    $links = sentLinks();
 
-    $this->flushSession();
-    $this->get($fromTheMail)->assertRedirect(route('preference-center.show'));
+    expect($links)->toHaveCount(2)
+        ->and(array_map(fn ($link) => brandOfLink($link['url']), $links))
+        ->toBe(Brand::query()->orderBy('id')->pluck('id')->all())
+        ->and(array_column($links, 'brand'))->toBe(['Default', 'Second']);
+});
+
+it('counts one mailbox once, however many brands the host runs', function () {
+    // The address key used to be `hash(brand|address)`, which reads like tidy
+    // namespacing and gave every brand its own budget: three mails an hour
+    // becomes 3×N into one inbox, with only the origin limiter in the way.
+    // Measured on the QA hub as three brands, three counters, three mails.
+    config()->set('preference-center.magic_link.throttle.per_address', ['max' => 2, 'decay_minutes' => 60]);
+    config()->set('preference-center.magic_link.throttle.per_origin', ['max' => 50, 'decay_minutes' => 60]);
+
+    $this->enableMultiBrand();
+
+    foreach (['default', 'second', 'third'] as $handle) {
+        $this->makeBrand($handle, ucfirst($handle));
+
+        $this->inBrand($handle, function () use ($handle) {
+            $lists = World::lists([$handle.'-news']);
+            World::subscriber('everywhere@example.com', [$handle.'-news'], $lists);
+        });
+    }
+
+    foreach (['default', 'second', 'third'] as $handle) {
+        app('brand-context')->forget();
+
+        $this->post(route('preference-center.request.send'), [
+            'email' => 'everywhere@example.com',
+            'pcBrand' => $handle,
+        ]);
+
+        $this->flushSession();
+    }
+
+    // Two, not three. The third request was refused by the address limiter
+    // although it named a brand that had never been asked before.
+    Mail::assertSent(MagicLinkMail::class, 2);
 });

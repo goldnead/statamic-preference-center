@@ -114,11 +114,34 @@ own fault.
   that mailbox is the one the provider told us to stop writing to.
 - **An unknown address gets nothing.** Otherwise the endpoint mails a signed link to anything typed
   into it, which is an open relay with extra steps.
-- **On a multi-brand host, tell it which brand**: `?pcBrand=<handle>`, carried into the POST as a
-  hidden field. Every other entrance derives its brand from something the visitor could not choose;
-  this one has nothing to derive from, because an address is not yet known to belong anywhere. Naming
-  a brand changes which audience is searched and which brand the link opens — never what is revealed,
-  because the answer is the same sentence whichever brand is named and whether it exists at all.
+- **The address names the brand, not the visitor.** The form has two fields, `_token` and `email`,
+  and no brand field. Every other entrance derives its brand from something the visitor could not
+  choose; this one has nothing to derive from, because an address is not yet known to belong anywhere
+  and that is the question being asked. So the lookup runs in every brand, and the mail carries one
+  link per brand that has heard of this address — normally exactly one. Nothing is revealed by that:
+  the page says the same sentence either way, and the only person who learns which brands know the
+  address is whoever reads that mailbox.
+- **`?pcBrand=<handle>` still narrows it**, carried into the POST as a hidden field, for a site that
+  belongs to one brand of a multi-brand host. It cannot widen the search, and an unknown handle
+  behaves exactly as no hint at all.
+- **Two bodies, one message.** `text/plain` and `text/html` in a `multipart/alternative`. A signed
+  link is around three hundred characters, and as running text alone it is wrapped by the clients
+  that do not linkify and guessed at by the ones that do. The two parts escape the URL in opposite
+  directions and both are right — see the note in each template, and the tests that follow the link
+  out of each body rather than reading it.
+
+### What following one does to the session
+
+The link is spent on arrival and leaves a short-lived note in the session, with its own expiry. Two
+consequences that are not decoration:
+
+- **The session id is regenerated, and the old one destroyed.** From the click onwards the session id
+  is the credential, so anything that handed somebody an id they did not create — a shared machine, a
+  forwarded URL, a neighbouring subdomain — would otherwise hand them the page.
+- **A login ends the note.** It outranks an authenticated session on purpose, because whoever just
+  followed a link is asking about the address in that link. But signing in says somebody else is at
+  the keyboard now, and from there the session door takes over. `Login` only: the person who was
+  already signed in when they clicked their own link keeps the note.
 
 ### What it deliberately does not have
 
@@ -150,9 +173,13 @@ that is collected. Defaults alone produce it. The control then selects nothing a
 mixed, rather than rounding it to the nearest word and putting a caption on the page that the page's
 own data contradicts.
 
-The cadence is a blunt control: it rewrites the mail and digest channel of every optional type. It
-therefore runs only when it actually changed, so it cannot flatten a matrix somebody just tuned by
-hand.
+The cadence is a blunt control: it rewrites the mail and digest channel of every optional type. Two
+things keep it from flattening a matrix somebody just tuned by hand. It runs only when the choice
+actually changed — resubmitting the same word writes nothing. And when a submission carries a
+cadence *and* a cleared checkbox, the checkbox wins: the cadence writes first, then every cell whose
+posted value differs from the value the page rendered is written over the top of it. That set is
+exactly the boxes somebody clicked, so an untouched cell keeps what the cadence gave it and a clicked
+one keeps what the person asked for.
 
 ## What it stores
 

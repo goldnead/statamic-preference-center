@@ -97,6 +97,66 @@ it('leaves a hand-tuned matrix alone when the cadence did not change', function 
             ->where('type', 'event.reminder')->where('channel', 'mail')->value('enabled'))->toBeTruthy();
 });
 
+it('lets a box somebody just cleared beat the cadence in the same submission', function () {
+    // The submission that says both things at once: `immediate`, and this one
+    // type off. v1.0.0 answered `enabled = 1` with no refusal, no notice and no
+    // trace — measured on the QA hub — while the README promised the opposite in
+    // as many words. A page that undoes a click without saying so is worse than
+    // one that refuses it.
+    $before = $this->get(route('preference-center.token', $this->token))->assertOk();
+
+    // The box in question is on, so clearing it is a change somebody made.
+    expect(renderedCells($before->getContent())['community.mention.mail'])->toBe('on');
+
+    $response = $this->followingRedirects()->post(route('preference-center.token.update', $this->token), [
+        'action' => 'save',
+        'blocks' => ['frequency', 'types'],
+        'frequency' => Frequency::IMMEDIATE,
+        'types' => [
+            // Everything the page rendered, except the one box that was cleared.
+            'account.security' => ['in_app' => '1', 'mail' => '1'],
+            'community.mention' => ['in_app' => '1'],
+            'event.reminder' => ['in_app' => '1', 'mail' => '1'],
+            'search.alert' => ['in_app' => '1', 'mail' => '1'],
+        ],
+    ])->assertOk();
+
+    expect(renderedCells($response->getContent())['community.mention.mail'])->toBe('off')
+        ->and(NotificationPreference::query()
+            ->where('type', 'community.mention')->where('channel', 'mail')->value('enabled'))->toBeFalsy();
+
+    // And the cadence still did its work everywhere it was not contradicted.
+    expect(NotificationPreference::query()
+        ->where('type', 'event.reminder')->where('channel', 'mail')->value('enabled'))->toBeTruthy()
+        ->and(renderedCells($response->getContent())['event.reminder.mail'])->toBe('on');
+});
+
+it('still lets the cadence write every cell nobody contradicted', function () {
+    // The worry the old skip came from is real: the checkboxes were rendered
+    // before the cadence ran, so they are stale. The comparison answers it —
+    // an untouched cell equals what was rendered, the loop never reaches it,
+    // and the cadence's write stands.
+    chooseFrequency($this, $this->token, Frequency::IMMEDIATE);
+
+    $this->followingRedirects()->post(route('preference-center.token.update', $this->token), [
+        'action' => 'save',
+        'blocks' => ['frequency', 'types'],
+        'frequency' => Frequency::WEEKLY,
+        // Exactly what the page rendered under `immediate`: nothing was clicked.
+        'types' => [
+            'account.security' => ['in_app' => '1', 'mail' => '1'],
+            'community.mention' => ['in_app' => '1', 'mail' => '1'],
+            'event.reminder' => ['in_app' => '1', 'mail' => '1'],
+            'search.alert' => ['in_app' => '1', 'mail' => '1'],
+        ],
+    ])->assertOk();
+
+    $fresh = $this->get(route('preference-center.token', $this->token))->assertOk();
+
+    expect(renderedFrequency($fresh->getContent()))->toBe(Frequency::WEEKLY)
+        ->and(NotificationPreference::query()->where('channel', 'mail')->where('enabled', true)->count())->toBe(0);
+});
+
 it('rejects a cadence nobody offers', function () {
     $this->followingRedirects()->post(route('preference-center.token.update', $this->token), [
         'action' => 'save',

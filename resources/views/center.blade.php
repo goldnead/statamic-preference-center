@@ -59,6 +59,19 @@
                         @foreach ($view->lists as $row)
                             <li class="row{{ $row->blocked ? ' is-blocked' : '' }}"
                                 data-list="{{ $row->handle }}" data-state="{{ $row->state() }}">
+                                {{--
+                                    No hidden twin for a blocked list row, and
+                                    that is deliberate. `SubscriptionPreferences`
+                                    leaves a blocked row alone in both
+                                    directions and only objects when a
+                                    submission asks for one to be switched *on*
+                                    — so the browser's own behaviour, dropping
+                                    the disabled box, is exactly right here, and
+                                    carrying the handle back would manufacture
+                                    the refusal instead of preventing it. The
+                                    matrix below is the other way round; see
+                                    there.
+                                --}}
                                 <label>
                                     <input type="checkbox" name="lists[]" value="{{ $row->handle }}"
                                         @checked($row->active) @disabled($row->blocked)>
@@ -149,6 +162,28 @@
                                             data-cell="{{ $row->type }}.{{ $channel }}"
                                             data-state="{{ $row->isLocked($channel) ? 'locked-'.($row->isEnabled($channel) ? 'on' : 'off') : ($row->isEnabled($channel) ? 'on' : 'off') }}"
                                             data-reason="{{ $row->reason($channel) ?? '' }}">
+                                            @if ($row->isLocked($channel) && $row->isEnabled($channel))
+                                                {{--
+                                                    What a disabled box does not say.
+
+                                                    A browser omits a disabled checkbox from the
+                                                    submission entirely, so a locked-on cell arrives
+                                                    looking exactly like a cell somebody has just
+                                                    switched off — and comes back refused, at a
+                                                    control nobody touched. A blocked person who
+                                                    pressed Save without changing anything got ten of
+                                                    those, from the required types and the blocked
+                                                    channels together.
+
+                                                    This carries the state the page displayed, so an
+                                                    untouched form posts what it showed. It changes
+                                                    nothing about what may be written: the writer
+                                                    re-reads every lock from the source, and a POST
+                                                    that drops this field is refused exactly as it
+                                                    was before.
+                                                --}}
+                                                <input type="hidden" name="types[{{ $row->type }}][{{ $channel }}]" value="1">
+                                            @endif
                                             <input type="checkbox"
                                                 name="types[{{ $row->type }}][{{ $channel }}]" value="1"
                                                 @checked($row->isEnabled($channel)) @disabled($row->isLocked($channel))>

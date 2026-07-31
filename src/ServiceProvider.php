@@ -3,10 +3,12 @@
 namespace Goldnead\PreferenceCenter;
 
 use Goldnead\PreferenceCenter\Events\PreferencesChanged;
+use Goldnead\PreferenceCenter\Listeners\EndTheNoteOnLogin;
 use Goldnead\PreferenceCenter\Listeners\RecordPreferenceChange;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\NotificationsSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 
@@ -43,6 +45,9 @@ class ServiceProvider extends LaravelServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'preference-center');
 
         Event::listen(PreferencesChanged::class, RecordPreferenceChange::class);
+
+        // Whoever signs in is the person at the keyboard now. See the listener.
+        Event::listen(Login::class, EndTheNoteOnLogin::class);
 
         if (config('preference-center.routes.enabled', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');

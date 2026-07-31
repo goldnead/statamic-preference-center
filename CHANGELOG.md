@@ -1,5 +1,157 @@
 # Changelog
 
+## 1.1.0 — 2026-07-31
+
+Seven findings from an independent acceptance of 1.0.0, written by an agent that did not build it.
+Two were blocking and the verdict was "not yet, for a production site". The three limits from L15
+were checked twice there and held; they are checked again after these changes, on the hub, with the
+new hidden fields stripped out of the submission.
+
+### Fixed — the link request mailed nothing to anybody, on any brand
+
+**What would have been possible: nothing.** That is the defect. The magic link is the only door for
+somebody with no account and no old mail in their inbox, and on a multi-brand host it was shut for
+every address, in every brand, for the whole life of 1.0.0.
+
+The form carries two fields, `_token` and `email`. Nothing on it establishes a brand and no
+middleware sets one for that route, so `BrandScope` failed closed and `known()` answered false for
+every address ever typed into it. Measured on the QA hub against v1.0.0, with the same address in the
+same second: **0 mails without `?pcBrand=`, 1 with it**. The README named `pcBrand`; the form did
+not, and nothing in the response could have told anybody.
+
+The property that makes this endpoint safe is what hid it. One sentence for every outcome — sent, no
+such person, blocked, throttled — is deliberate, and it is also indistinguishable from a total
+outage. A silence designed to reveal nothing revealed nothing about itself either.
+
+**The decision, and why.** Three answers were available to "which brand, when nobody named one", and
+two of them are wrong. A silent default brand is a bet: it searches one audience and gives everybody
+else the same reassuring sentence, which is then untrue for every person who belongs to another
+brand. A visible brand field publishes the brand list to anyone who loads the page, and asks somebody
+who was mailed by one of several sister sites to remember which company that was. So the address
+answers it: the lookup runs in every brand, and the mail carries one link per brand that has heard of
+this address — normally exactly one, and then the mail is the mail it always was. The page still says
+the same sentence either way; the only person who learns which brands know the address is whoever
+reads that mailbox, and they already get mail from all of them. `pcBrand` still narrows the search
+for a site that belongs to one brand, and still cannot widen it. The reasoning lives in
+`MagicLinkRequests::brandsToSearch()`, where the code that acts on it is, and in the README.
+
+The test that would have caught it now asserts the opposite of what its predecessor did: the old one
+pinned "without the hint, the default brand is searched and this address is not in it — no mail",
+which is the broken behaviour, written down and passed for a release.
+
+### Fixed — a session id handed over before the click still opened the page
+
+**What would have been possible:** read and change a stranger's preferences. Anybody who could plant
+a session id in somebody else's browser — a shared machine, a forwarded URL carrying a session
+parameter, a cookie written from a neighbouring subdomain, script injection anywhere on the domain —
+kept access for the sixty minutes of the note as soon as that person followed a magic link. Their
+address in the lede, every mailing list switchable, every notification switchable, and
+"unsubscribe from everything" one button away. No account and no password anywhere in that chain.
+
+`SessionAccess::open()` wrote the note into the session it was handed. It now regenerates the id
+first and destroys the old record — the same move `Auth::login()` makes, for the same reason: from
+the click onwards the session id *is* the credential. Measured on the QA hub against v1.0.0: the
+cookie captured before the click, replayed from a separate browser context, answered **HTTP 200 with
+the other person's address**. Afterwards it answers 404.
+
+The test that pins it does not check that `regenerate()` was called. It captures the cookie, replays
+it, and reads what comes back — and a second test follows the *new* cookie to the page, because a fix
+that threw the note away with the old id would have passed the first one and been the worse bug.
+
+### Fixed — the magic-link note outlived a login
+
+The note outranks an authenticated session on purpose: whoever just followed a link is asking about
+the address in that link, which need not be the address on the account they are still signed into.
+That order is right for them and wrong for the next person, and nothing discarded the note, so on a
+shared machine a colleague could sign in with their own account and be shown — and be able to change
+— the first person's settings for an hour. A login now ends it.
+
+`Login`, not `Authenticated`: the second fires on every request that resolves a user, including every
+request by the person who was already signed in when they clicked their own link, and listening to it
+would quietly reverse the ordering this package chose. There is a test for each direction.
+
+### Fixed — the cadence overwrote, in silence, a box somebody had just cleared
+
+A submission carrying `frequency=immediate` and one cleared checkbox ended with that checkbox back
+on, no refusal, no notice, no trace. The README promised the opposite in as many words: "it cannot
+flatten a matrix somebody just tuned by hand". Code and promise disagreed; the promise was right.
+
+The cadence writes every optional mail-bearing cell, then the matrix writes the cells whose posted
+value differs from the value the page rendered — which is exactly the set of boxes somebody clicked.
+The stale-state worry the old skip came from is real and is answered by that comparison rather than by
+a blanket skip: an untouched cell equals what was rendered, so the loop never reaches it and the
+cadence's write stands. Both behaviours have a test now, and the README says what the code does.
+
+### Fixed — the mail had no HTML part
+
+`MagicLinkMail::build()` called `->text()` and nothing else: single-part `text/plain`, HTML length 0
+in Mailpit, with a three-hundred-character signed URL as running text. Clients that do not linkify
+wrap it; clients that do have to guess where it ends. Both parts are sent now, in one
+`multipart/alternative`.
+
+The two parts escape the URL in opposite directions and both are right: the plain-text body must not
+escape the `&` before `signature` (that was the 1.0.0 regression — Blade's default made it `&amp;`
+and Laravel answered 403 on every link), and the HTML body must, because an attribute value is an
+HTML context and the client turns `&amp;` back into `&` before it opens anything. Each template says
+so at the line that does it. The tests take the link out of each rendered body — decoding the href,
+as a mail client would — and follow it, because "contains a URL" was true the whole time 1.0.0 was
+broken.
+
+### Fixed — the address limiter counted brand keys, not mailboxes
+
+The per-address key was `hash(brand_id|address)`, which reads like tidy namespacing and gave every
+brand its own budget of three an hour: **3×N mails into one inbox** on a host with N brands, with only
+the origin limiter in the way. Measured on the QA hub: three requests for one address, differing only
+in `pcBrand`, produced three separate counters at 1. The key is now the address and nothing else. A
+limit that protects a key instead of a person protects nobody.
+
+### Fixed — saving without changing anything answered with a wall of refusals
+
+A blocked person pressed Save, touched nothing, and got "Nothing was changed" over ten red lines. No
+forgery involved: a browser omits a `disabled` checkbox from the submission entirely, so a locked-on
+cell arrived looking exactly like a cell somebody had just switched off, and the write path refused
+each one — correctly, and at a control nobody had touched. A reader who is argued with by a page
+about their own settings does not open a ticket; they press "spam".
+
+Locked-on cells now carry a hidden field with the state the page displayed, so an untouched form
+posts what it showed. It is not a way in: the writer re-reads every lock from the source, and a POST
+that drops those fields is refused exactly as before — which is the case the third test in
+`UntouchedSubmissionTest` posts. Blocked *list* rows deliberately get no such field:
+`SubscriptionPreferences` leaves a blocked row alone in both directions and only objects to a
+submission that asks for one to be switched on, so carrying the handle back would have manufactured
+the refusal instead of preventing it.
+
+### Notes
+
+- Suite: **80 passed, 329 assertions** (63/229 before), SQLite in memory; `DB_DRIVER=mysql` runs the
+  identical suite against a real server.
+- Removal proof: each of the seven changes was taken back out in turn and its own tests re-run. Seven
+  of seven turned red — 3 of 4 brand cases, 2 of 3 session cases, both login cases, the cadence case,
+  3 of 4 mail cases, the limiter case, and both untouched-submission cases. One test in
+  `StorageBoundaryTest` had pinned the old limiter key by reading the source; it now pins the new one,
+  for the same reason it existed.
+- The `MagicLinkMail` constructor now takes a list of links rather than one URL string, and
+  `MagicLinkRequests::request()` takes `?int $brandId` where null means "no brand was named". Both are
+  internal to the request path; a host that has not subclassed them is unaffected. `$mail->url()`
+  replaces `$mail->url`.
+- Verified on the QA hub, four brands, all three sources installed, in the area
+  `preference-center-fixes` — the same measurement twice, once against v1.0.0 and once against this
+  version: link request without a brand **0 → 1** mail (and an address known in two brands: **0 → 1
+  mail carrying 2 links**); replayed session cookie **200 with a stranger's address → 404**; after a
+  login in the same browser `data-proof` **magic_link with the other address → session with the
+  account's own**; a cleared checkbox against `immediate` **enabled=1 → enabled=0**, silently → and
+  now visibly off; the mail **text/plain, HTML length 0 → multipart/alternative, HTML length 2240,
+  with the link taken out of the HTML part, entity-decoded and opened: HTTP 200**; six requests for
+  one mailbox across three brands **6 → 3 mails**; blocked person presses Save **10 refusals → 0**,
+  with the locks still on the page. Then the L15 re-check on the repaired build, with the new hidden
+  fields stripped from the POST: cell states unchanged, zero notification channels switched on, the
+  subscription untouched, the suppression row unreleased.
+- The response-time floor was not touched. It is measured in that area and stated for what it is: at
+  350 ms it sits far below the response times this host produces for either path, so it covers
+  nothing here, and the acceptance was right that its coverage was never demonstrated. Raising it
+  above the slowest send, or taking the send off the request, is the only thing that would — and
+  neither is claimed.
+
 ## 1.0.0 — 2026-07-31
 
 ### Added — one page over three packages, and none of them required
