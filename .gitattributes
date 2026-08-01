@@ -1,5 +1,6 @@
 # Everything in this repo is downloaded into every site that installs the addon
-# unless it is export-ignored. Tests and CI config are not the buyer's problem.
+# unless it is export-ignored. Tests, CI config and the listing artwork are not
+# the buyer's problem.
 #
 # Never add /config, /resources/lang, /resources/views, /routes, /src, README.md,
 # UPGRADE.md, CHANGELOG.md or LICENSE to this list — the published views are a
@@ -7,6 +8,8 @@
 
 /.github            export-ignore
 /tests              export-ignore
+/art                export-ignore
+/screenshots        export-ignore
 /.gitattributes     export-ignore
 /.gitignore         export-ignore
 /.editorconfig      export-ignore

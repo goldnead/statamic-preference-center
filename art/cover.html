@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    background: radial-gradient(1200px 700px at 78% 22%, #581C87 0%, #3B0764 55%, #180B26 100%);
+    color: #fff; overflow: hidden; position: relative;
+  }
+  .wrap { display: flex; height: 100%; align-items: center; padding: 0 92px; gap: 64px; }
+  .copy { max-width: 660px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 22px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: #F5D0FE; margin-bottom: 26px;
+  }
+  .eyebrow .dot { width: 12px; height: 12px; border-radius: 50%; background: #E879F9; box-shadow: 0 0 18px #E879F9; }
+  h1 { font-size: 64px; line-height: 1.02; font-weight: 800; letter-spacing: -.02em; }
+  h1 .accent { background: linear-gradient(90deg,#F0ABFC,#C4B5FD); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  p.sub { margin-top: 28px; font-size: 30px; line-height: 1.35; color: #CBD5E1; font-weight: 400; }
+  .badges { margin-top: 40px; display: flex; gap: 14px; }
+  .badge { font-size: 22px; font-weight: 600; padding: 12px 22px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); color: #FAE8FF; white-space: nowrap; }
+  .art { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .glyph { width: 360px; height: 360px; filter: drop-shadow(0 30px 60px rgba(0,0,0,.45)); }
+  .corner { position: absolute; right: -120px; bottom: -160px; width: 520px; height: 520px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(217,70,239,.28), transparent 60%); }
+</style>
+</head>
+<body>
+  <div class="corner"></div>
+  <div class="wrap">
+    <div class="copy">
+      <span class="eyebrow"><span class="dot"></span>Statamic Addon</span>
+      <h1>Statamic<br><span class="accent">Preference Center</span></h1>
+      <p class="sub">One public page where a recipient manages every list and channel &mdash; reached by magic link, without an account.</p>
+      <div class="badges">
+        <span class="badge">Magic link</span>
+        <span class="badge">Lists</span>
+        <span class="badge">Channels</span>
+        <span class="badge">Cadence</span>
+      </div>
+    </div>
+    <div class="art">
+      <svg class="glyph" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#D946EF"/><stop offset="1" stop-color="#8B5CF6"/>
+          </linearGradient>
+          <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#3B0764" flood-opacity="0.32"/>
+          </filter>
+        </defs>
+        <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+        <!-- preference panel -->
+        <g filter="url(#sh)">
+          <rect x="100" y="124" width="312" height="264" rx="36" fill="#FFFFFF"/>
+        </g>
+        <!-- row 1: on -->
+        <rect x="138" y="170" width="112" height="18" rx="9" fill="url(#bg)" opacity="0.5"/>
+        <rect x="284" y="159" width="86" height="40" rx="20" fill="url(#bg)"/>
+        <circle cx="350" cy="179" r="14" fill="#FFFFFF"/>
+        <!-- row 2: off -->
+        <rect x="138" y="247" width="86" height="18" rx="9" fill="url(#bg)" opacity="0.5"/>
+        <rect x="284" y="236" width="86" height="40" rx="20" fill="url(#bg)" opacity="0.26"/>
+        <circle cx="304" cy="256" r="14" fill="#FFFFFF"/>
+        <!-- row 3: on -->
+        <rect x="138" y="324" width="132" height="18" rx="9" fill="url(#bg)" opacity="0.5"/>
+        <rect x="284" y="313" width="86" height="40" rx="20" fill="url(#bg)"/>
+        <circle cx="350" cy="333" r="14" fill="#FFFFFF"/>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
