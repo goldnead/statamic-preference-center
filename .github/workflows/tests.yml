@@ -1,5 +1,10 @@
 name: tests
 
+# The matrix covers the ranges composer.json actually promises. A single
+# combination would make those constraints a claim nobody verified — and this
+# package sits on top of six sibling packages, which is exactly where a
+# resolution that only works on one machine hides.
+
 on:
   push:
     branches: [main]
@@ -7,19 +12,29 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   pest:
-    name: PHP ${{ matrix.php }}
+    name: PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} · ${{ matrix.stability }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         php: ['8.2', '8.3', '8.4']
+        laravel: ['^12.40', '^13.0']
+        stability: [prefer-lowest, prefer-stable]
+        exclude:
+          # Laravel 13 requires PHP ^8.3.
+          - php: '8.2'
+            laravel: '^13.0'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -29,12 +44,26 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      # goldnead/statamic-brand-context is private, so Composer needs a PAT with
-      # read access configured as the SIBLING_REPOS_TOKEN secret.
+      # Several goldnead siblings are private repositories. There is deliberately
+      # no `|| github.token` fallback: that token cannot read another private
+      # repo, so an unset secret used to surface as a Composer 404 that reads
+      # like a network blip. Fail here instead, where the message is true.
+      - name: Require the sibling token
+        env:
+          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "SIBLING_REPOS_TOKEN is not set. The goldnead sibling packages are private;"
+            echo "Composer cannot read them without a PAT that has repo:read on them."
+            exit 1
+          fi
+
       - name: Install dependencies
         env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN || github.token }}"}}'
-        run: composer update --prefer-dist --no-progress --no-interaction
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-progress --no-interaction
 
       - name: Show installed sibling versions
         run: composer show | grep -E 'goldnead|statamic/cms|laravel/framework'
@@ -42,12 +71,109 @@ jobs:
       - name: Run Pest test suite
         run: vendor/bin/pest --colors=always
 
-  lint:
-    name: lint
+  mysql:
+    name: MySQL
+    runs-on: ubuntu-latest
+
+    # tests/TestCase.php carries a whole second database connection for this
+    # job. Without it the safeguard is opt-in, and the InnoDB key-length class
+    # of bug it was written for passes a green SQLite suite untouched.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: preference_center_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_mysql, intl, fileinfo, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Require the sibling token
+        env:
+          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
+        run: '[ -n "$TOKEN" ] || { echo "SIBLING_REPOS_TOKEN is not set."; exit 1; }'
+
+      - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      - name: Run Pest against MySQL
+        env:
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: preference_center_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: vendor/bin/pest --colors=always
+
+  quality:
+    name: Style and static analysis
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, intl, fileinfo, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Require the sibling token
+        env:
+          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
+        run: '[ -n "$TOKEN" ] || { echo "SIBLING_REPOS_TOKEN is not set."; exit 1; }'
+
+      - name: Install dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      # Check, never fix. Auto-committing style onto a contributor's branch
+      # rewrites their work without asking.
+      - name: Pint
+        run: vendor/bin/pint --test
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+  standards:
+    name: Addon standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: addon
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          repository: goldnead/statamic-addon-studio
+          path: studio
+          token: ${{ secrets.STUDIO_TOKEN }}
+          persist-credentials: false
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -55,8 +181,28 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Syntax check
-        run: find src tests config routes -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+      - name: Run addon-lint
+        run: php studio/tools/addon-lint/bin/addon-lint addon --no-color --fail-on=never -v
 
-      - name: Validate composer.json
-        run: composer validate --no-check-publish
+      # `release.resolvable-dependencies` is a blocker and stays one until the
+      # sibling packages are on Packagist — see the reason recorded in
+      # addon-lint.json. It is named here rather than disabled in that file so
+      # the finding keeps printing above. Everything else at major or worse
+      # fails the build.
+      - name: Fail on any finding except the known Packagist blocker
+        run: |
+          php studio/tools/addon-lint/bin/addon-lint addon --format=json --fail-on=never > lint.json
+          php -r '
+            $r = json_decode(file_get_contents("lint.json"), true);
+            $bad = [];
+            foreach ($r["addons"] ?? [] as $addon) {
+                foreach ($addon["findings"] ?? [] as $f) {
+                    if (in_array($f["severity"] ?? "", ["blocker", "major"], true)
+                        && ($f["rule"] ?? "") !== "release.resolvable-dependencies") {
+                        $bad[] = $f["severity"].": ".$f["rule"];
+                    }
+                }
+            }
+            if ($bad) { echo implode(PHP_EOL, $bad), PHP_EOL; exit(1); }
+            echo "No unexpected blocker or major findings.", PHP_EOL;
+          '
