@@ -38,7 +38,7 @@ class LinkTokenizer
     }
 
     /**
-     * @return array{email:string, brand:int}|null  null when the blob is not ours
+     * @return array{email:string, brand:int}|null null when the blob is not ours
      */
     public function open(string $blob): ?array
     {

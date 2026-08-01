@@ -2,6 +2,8 @@
 
 namespace Goldnead\PreferenceCenter\Sources;
 
+use Goldnead\Notifications\Preferences\PreferenceResolver;
+use Goldnead\Notifications\Types\TypeRegistry;
 use Goldnead\PreferenceCenter\Data\Access;
 use Goldnead\PreferenceCenter\Data\SuppressionState;
 use Goldnead\PreferenceCenter\Data\TypeRow;
@@ -27,9 +29,9 @@ use Goldnead\PreferenceCenter\Frequency;
  */
 class NotificationsSource extends Source
 {
-    public const RESOLVER = \Goldnead\Notifications\Preferences\PreferenceResolver::class;
+    public const RESOLVER = PreferenceResolver::class;
 
-    public const REGISTRY = \Goldnead\Notifications\Types\TypeRegistry::class;
+    public const REGISTRY = TypeRegistry::class;
 
     /** Why a cell cannot be changed. Rendered as an explanation, not a code. */
     public const LOCK_REQUIRED = 'required';
@@ -64,7 +66,7 @@ class NotificationsSource extends Source
     }
 
     /**
-     * @return list<TypeRow>|null  null when the source is not installed.
+     * @return list<TypeRow>|null null when the source is not installed.
      */
     public function rows(Access $access, SuppressionState $suppression): ?array
     {

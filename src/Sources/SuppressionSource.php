@@ -3,6 +3,8 @@
 namespace Goldnead\PreferenceCenter\Sources;
 
 use Goldnead\PreferenceCenter\Data\SuppressionState;
+use Goldnead\Suppression\Contracts\Gate;
+use Goldnead\Suppression\Exceptions\SuppressionCheckFailed;
 
 /**
  * The block state, from `goldnead/statamic-suppression`.
@@ -13,9 +15,9 @@ use Goldnead\PreferenceCenter\Data\SuppressionState;
  */
 class SuppressionSource extends Source
 {
-    public const GATE = \Goldnead\Suppression\Contracts\Gate::class;
+    public const GATE = Gate::class;
 
-    public const CHECK_FAILED = \Goldnead\Suppression\Exceptions\SuppressionCheckFailed::class;
+    public const CHECK_FAILED = SuppressionCheckFailed::class;
 
     public function key(): string
     {

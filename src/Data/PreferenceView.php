@@ -2,6 +2,8 @@
 
 namespace Goldnead\PreferenceCenter\Data;
 
+use Goldnead\PreferenceCenter\Frequency;
+
 /**
  * Everything one page shows, assembled from whichever sources are installed.
  *
@@ -43,6 +45,6 @@ final class PreferenceView
     /** The channels the cadence control governs, of those this install has. */
     public function mailChannels(): array
     {
-        return array_values(array_intersect($this->channels, \Goldnead\PreferenceCenter\Frequency::MAIL_CHANNELS));
+        return array_values(array_intersect($this->channels, Frequency::MAIL_CHANNELS));
     }
 }

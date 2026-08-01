@@ -1,5 +1,6 @@
 <?php
 
+use Goldnead\IdentityContracts\Facades\IdentityContext;
 use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\PreferenceCenter\Tests\Fixtures\FixtureUser;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
@@ -50,7 +51,7 @@ it('stores against exactly the identity the sender would resolve, and no more', 
         ->and($row->contact_uuid)->toBeNull()
         ->and($row->uniqueness_key)->toHaveLength(64);
 
-    $identity = \Goldnead\IdentityContracts\Facades\IdentityContext::resolve($this->user);
+    $identity = IdentityContext::resolve($this->user);
 
     // Every row this page wrote is a row the sender's own scope reads back.
     // Not "some of them": a single row keyed differently is a preference the

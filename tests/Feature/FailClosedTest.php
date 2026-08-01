@@ -1,5 +1,6 @@
 <?php
 
+use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
 use Goldnead\Suppression\Contracts\Gate;
 use Goldnead\Suppression\Exceptions\SuppressionCheckFailed;
@@ -62,6 +63,6 @@ it('refuses to switch anything on while it cannot ask', function () {
         ->assertOk()
         ->assertSee(__('preference-center::public.refused_blocked'));
 
-    expect(\Goldnead\Notifications\Models\NotificationPreference::query()
+    expect(NotificationPreference::query()
         ->where('channel', 'mail')->where('enabled', true)->count())->toBe(0);
 });

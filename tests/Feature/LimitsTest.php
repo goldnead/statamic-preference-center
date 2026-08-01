@@ -1,5 +1,6 @@
 <?php
 
+use Goldnead\Leadhub\Models\Contact;
 use Goldnead\Marketing\Models\Subscription;
 use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
@@ -49,7 +50,7 @@ it('will not lift a block that exists only in the suppression table', function (
     // would see an ordinary subscriber and offer every list back.
     app(SuppressionService::class)->suppress('jane@example.com', Reasons::COMPLAINT);
 
-    expect((bool) \Goldnead\Leadhub\Models\Contact::query()
+    expect((bool) Contact::query()
         ->where('email', 'jane@example.com')->value('do_not_contact'))->toBeFalse();
 
     $this->followingRedirects()
@@ -128,7 +129,7 @@ it('writes nothing for a visitor it could not place', function () {
     // `user_id` AND `contact_uuid` with `=`; both NULL hashes to one key that
     // every unplaceable visitor would then share.
     Subscription::query()->update(['contact_uuid' => null]);
-    \Goldnead\Leadhub\Models\Contact::query()->delete();
+    Contact::query()->delete();
 
     $response = $this->get(route('preference-center.token', $this->token))->assertOk();
 

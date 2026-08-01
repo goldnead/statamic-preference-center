@@ -2,6 +2,7 @@
 
 namespace Goldnead\PreferenceCenter\Listeners;
 
+use Goldnead\Leadhub\Facades\LeadHub;
 use Goldnead\PreferenceCenter\Events\PreferencesChanged;
 use Illuminate\Support\Facades\Log;
 
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\Log;
  */
 class RecordPreferenceChange
 {
-    public const LEADHUB = \Goldnead\Leadhub\Facades\LeadHub::class;
+    public const LEADHUB = LeadHub::class;
 
     public function handle(PreferencesChanged $event): void
     {

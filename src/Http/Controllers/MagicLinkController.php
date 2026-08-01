@@ -2,6 +2,7 @@
 
 namespace Goldnead\PreferenceCenter\Http\Controllers;
 
+use Goldnead\BrandContext\Models\Brand;
 use Goldnead\PreferenceCenter\Http\SessionAccess;
 use Goldnead\PreferenceCenter\MagicLink\LinkTokenizer;
 use Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests;
@@ -93,8 +94,8 @@ class MagicLinkController extends Controller
         return is_string($handle) && $handle !== '' ? $handle : null;
     }
 
-    /** @return \Goldnead\BrandContext\Models\Brand|null  the brand that was named and found */
-    protected function applyBrand(Request $request): ?\Goldnead\BrandContext\Models\Brand
+    /** @return Brand|null  the brand that was named and found */
+    protected function applyBrand(Request $request): ?Brand
     {
         $manager = app('brand-context');
         $handle = $this->requestedBrand($request);
@@ -103,7 +104,7 @@ class MagicLinkController extends Controller
             return null;
         }
 
-        $brand = \Goldnead\BrandContext\Models\Brand::query()->where('handle', $handle)->first();
+        $brand = Brand::query()->where('handle', $handle)->first();
 
         if ($brand !== null) {
             $manager->setCurrent($brand);

@@ -70,7 +70,7 @@ function renderedRefusals(string $html): array
  * taking hidden fields, taking checkboxes and radios only when `checked` — so a
  * test can submit the page as displayed.
  *
- * @return array<string, mixed>  ready to hand to `post()`
+ * @return array<string, mixed> ready to hand to `post()`
  */
 function submittedByBrowser(string $html): array
 {

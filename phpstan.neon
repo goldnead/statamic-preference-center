@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - src
+        - config
+        - routes
+
+    # A ratchet for new code, not a rewrite of what is here. The baseline holds
+    # what the level found on the day it was switched on; anything new has to be
+    # clean. Shrink the baseline when a file is touched anyway, never grow it.
+    treatPhpDocTypesAsCertain: false

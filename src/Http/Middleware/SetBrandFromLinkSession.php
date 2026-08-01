@@ -3,6 +3,7 @@
 namespace Goldnead\PreferenceCenter\Http\Middleware;
 
 use Closure;
+use Goldnead\BrandContext\Models\Brand;
 use Goldnead\PreferenceCenter\Http\SessionAccess;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,7 +36,7 @@ class SetBrandFromLinkSession
             return $next($request);
         }
 
-        $brand = \Goldnead\BrandContext\Models\Brand::query()->find((int) $brandId);
+        $brand = Brand::query()->find((int) $brandId);
 
         if ($brand !== null) {
             $manager->setCurrent($brand);

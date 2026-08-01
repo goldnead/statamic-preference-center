@@ -1,6 +1,12 @@
 <?php
 
+use Goldnead\IdentityContracts\Identity;
+use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\Notifications\Support\UniquenessKey;
+use Goldnead\PreferenceCenter\Data\Access;
+use Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests;
+use Goldnead\PreferenceCenter\Proof;
+use Goldnead\PreferenceCenter\Sources\NotificationsSource;
 
 /**
  * What this package stores, and the two traps it stays out of by storing it.
@@ -48,7 +54,7 @@ it('bounds its own cache keys the same way', function () {
     // The magic-link limiter is keyed on a hash of the address, not the address.
     // A cache key that grows with its input is the same class of mistake as an
     // index that does — and an address is attacker-controlled input.
-    $service = new ReflectionClass(\Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests::class);
+    $service = new ReflectionClass(MagicLinkRequests::class);
     $source = file_get_contents($service->getFileName());
 
     // The address and nothing else: a mailbox is one mailbox however many
@@ -63,18 +69,18 @@ it('refuses the write itself, not only the control that offers it', function () 
     // calling the source directly, a future controller, a queued job. The two
     // are independent on purpose — the view's answer is about what to draw, and
     // this one is about what may reach `notification_preferences`.
-    $anonymous = new \Goldnead\PreferenceCenter\Data\Access(
-        identity: \Goldnead\IdentityContracts\Identity::anonymous()->withEmail('nobody@example.com'),
-        proof: \Goldnead\PreferenceCenter\Proof::MAGIC_LINK,
+    $anonymous = new Access(
+        identity: Identity::anonymous()->withEmail('nobody@example.com'),
+        proof: Proof::MAGIC_LINK,
         email: 'nobody@example.com',
         brandId: 1,
     );
 
     expect($anonymous->canStoreNotificationPreferences())->toBeFalse();
 
-    expect(fn () => app(\Goldnead\PreferenceCenter\Sources\NotificationsSource::class)
+    expect(fn () => app(NotificationsSource::class)
         ->set($anonymous, 'community.mention', 'mail', true))
         ->toThrow(LogicException::class);
 
-    expect(\Goldnead\Notifications\Models\NotificationPreference::query()->count())->toBe(0);
+    expect(NotificationPreference::query()->count())->toBe(0);
 });

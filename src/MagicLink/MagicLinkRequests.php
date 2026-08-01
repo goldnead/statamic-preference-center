@@ -3,6 +3,7 @@
 namespace Goldnead\PreferenceCenter\MagicLink;
 
 use Goldnead\BrandContext\Models\Brand;
+use Goldnead\Leadhub\Contracts\Repositories\ContactRepository;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
 use Goldnead\PreferenceCenter\Support\EmailNormalizer;
@@ -217,8 +218,8 @@ class MagicLinkRequests
      * for a page that belongs to one site, not the mechanism the endpoint
      * depends on.
      *
-     * @return iterable<Brand|null>  null means "whatever brand is ambient",
-     *                               which is what a single-brand install has
+     * @return iterable<Brand|null> null means "whatever brand is ambient",
+     *                              which is what a single-brand install has
      */
     protected function brandsToSearch(?int $brandId): iterable
     {
@@ -256,7 +257,7 @@ class MagicLinkRequests
             }
         }
 
-        $repository = \Goldnead\Leadhub\Contracts\Repositories\ContactRepository::class;
+        $repository = ContactRepository::class;
 
         if (interface_exists($repository) && app()->bound($repository)) {
             if (app($repository)->findByEmailNormalized($email) !== null) {

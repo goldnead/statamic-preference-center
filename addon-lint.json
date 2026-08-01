@@ -1,0 +1,9 @@
+{
+    "_why": {
+        "testing.addon-testcase": "The rule's premise is an AddonServiceProvider, and this package deliberately has none: no control panel, no fieldtypes, no tags, nothing for Statamic's provider to register (see src/ServiceProvider.php). Statamic\\Testing\\AddonTestCase exists to boot exactly that provider — it replaces the addon Manifest with a single-package manifest and registers Statamic, Inertia and one addon provider. This suite has to register six sibling addon providers in order and fire their bootAddon() by hand (tests/TestCase.php), which the single-package manifest would break, and it carries a MySQL connection switch AddonTestCase has no place for. Revisit if this package ever grows a CP surface and becomes an AddonServiceProvider.",
+        "release.resolvable-dependencies": "Not suppressed, and deliberately left red: two hard requires (goldnead/statamic-brand-context, goldnead/statamic-identity-contracts) are not on Packagist yet, and the repositories block is what makes the family installable in the meantime. It comes out when the siblings are published, not before — see docs/publishing-to-packagist.md in the studio."
+    },
+    "disable": [
+        "testing.addon-testcase"
+    ]
+}

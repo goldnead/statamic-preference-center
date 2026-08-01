@@ -3,6 +3,7 @@
 use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\Notifications\Preferences\PreferenceResolver;
 use Goldnead\PreferenceCenter\Frequency;
+use Goldnead\PreferenceCenter\Identity\AccessResolver;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
 
 /**
@@ -44,7 +45,7 @@ it('round-trips every one of the four', function (string $choice) {
 it('stores the two cadences as a cadence and the other two as channel state', function () {
     chooseFrequency($this, $this->token, Frequency::DAILY);
 
-    $identity = app(\Goldnead\PreferenceCenter\Identity\AccessResolver::class)
+    $identity = app(AccessResolver::class)
         ->fromMarketingToken($this->token)->identity;
 
     expect(app(PreferenceResolver::class)->digestFrequency($identity))->toBe('daily')
@@ -68,7 +69,7 @@ it('never touches a required type, whichever cadence is chosen', function () {
     // notification mail", and the page says so in those words.
     expect(NotificationPreference::query()->where('type', 'account.security')->count())->toBe(0);
 
-    $identity = app(\Goldnead\PreferenceCenter\Identity\AccessResolver::class)
+    $identity = app(AccessResolver::class)
         ->fromMarketingToken($this->token)->identity;
 
     expect(app(PreferenceResolver::class)->allows($identity, 'account.security', 'mail'))->toBeTrue();

@@ -2,8 +2,11 @@
 
 namespace Goldnead\PreferenceCenter\Identity;
 
+use Goldnead\IdentityContracts\Contracts\ContactLocator;
 use Goldnead\IdentityContracts\Facades\IdentityContext;
 use Goldnead\IdentityContracts\Identity;
+use Goldnead\IdentityContracts\Resolvers\NullContactLocator;
+use Goldnead\Leadhub\Contracts\Repositories\ContactRepository;
 use Goldnead\PreferenceCenter\Support\EmailNormalizer;
 
 /**
@@ -21,9 +24,9 @@ use Goldnead\PreferenceCenter\Support\EmailNormalizer;
  */
 class ContactLookup
 {
-    public const CONTACT_REPOSITORY = \Goldnead\Leadhub\Contracts\Repositories\ContactRepository::class;
+    public const CONTACT_REPOSITORY = ContactRepository::class;
 
-    public const NULL_LOCATOR = \Goldnead\IdentityContracts\Resolvers\NullContactLocator::class;
+    public const NULL_LOCATOR = NullContactLocator::class;
 
     public function byEmail(?string $email): ?Identity
     {
@@ -38,11 +41,11 @@ class ContactLookup
 
     protected function fromLocator(string $email): ?Identity
     {
-        if (! interface_exists(\Goldnead\IdentityContracts\Contracts\ContactLocator::class)) {
+        if (! interface_exists(ContactLocator::class)) {
             return null;
         }
 
-        $locator = app(\Goldnead\IdentityContracts\Contracts\ContactLocator::class);
+        $locator = app(ContactLocator::class);
 
         // The shipped default answers null for everything. Calling it is
         // harmless; skipping it keeps the intent legible.

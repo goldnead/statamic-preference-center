@@ -4,6 +4,8 @@ use Goldnead\Marketing\Models\Subscription;
 use Goldnead\Notifications\Models\NotificationPreference;
 use Goldnead\PreferenceCenter\Tests\Fixtures\FixtureUser;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
+use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Route;
 
 /**
  * All three sources are optional, and none of them is optional in the weak
@@ -102,9 +104,9 @@ it('does not mount the token route where marketing is absent', function () {
     // first request, where it is a 500 for one visitor.
     config()->set('preference-center.sources.marketing', false);
 
-    $router = new \Illuminate\Routing\Router(app('events'), app());
+    $router = new Router(app('events'), app());
 
-    \Illuminate\Support\Facades\Route::swap($router);
+    Route::swap($router);
     require __DIR__.'/../../routes/web.php';
 
     $names = collect($router->getRoutes())->map(fn ($route) => $route->getName())->filter()->values()->all();

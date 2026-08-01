@@ -3,7 +3,12 @@
 namespace Goldnead\PreferenceCenter\Tests;
 
 use Goldnead\BrandContext\Models\Brand;
+use Goldnead\Leadhub\ServiceProvider as LeadhubServiceProvider;
+use Goldnead\Marketing\ServiceProvider;
+use Goldnead\PreferenceCenter\Tests\Fixtures\FixtureUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Support\Facades\Auth;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Statamic\Providers\StatamicServiceProvider;
 
@@ -21,8 +26,8 @@ abstract class TestCase extends OrchestraTestCase
 
         // Statamic runs bootAddon() inside Statamic::booted callbacks that
         // orchestra/testbench never fires.
-        $this->app->getProvider(\Goldnead\Leadhub\ServiceProvider::class)?->bootAddon();
-        $this->app->getProvider(\Goldnead\Marketing\ServiceProvider::class)?->bootAddon();
+        $this->app->getProvider(LeadhubServiceProvider::class)?->bootAddon();
+        $this->app->getProvider(ServiceProvider::class)?->bootAddon();
         $this->app->getProvider(\Goldnead\Notifications\ServiceProvider::class)?->bootAddon();
     }
 
@@ -33,8 +38,8 @@ abstract class TestCase extends OrchestraTestCase
             \Goldnead\BrandContext\ServiceProvider::class,
             \Goldnead\IdentityContracts\ServiceProvider::class,
             \Goldnead\Suppression\ServiceProvider::class,
-            \Goldnead\Leadhub\ServiceProvider::class,
-            \Goldnead\Marketing\ServiceProvider::class,
+            LeadhubServiceProvider::class,
+            ServiceProvider::class,
             \Goldnead\Notifications\ServiceProvider::class,
             \Goldnead\PreferenceCenter\ServiceProvider::class,
         ];
@@ -54,8 +59,8 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('marketing.storage.driver', 'eloquent');
 
         // Instant, so nothing in this suite waits on the enumeration floor.
-        // The floor itself is measured in MagicLinkEnumerationTest, which sets
-        // it back up for exactly that purpose.
+        // The floor itself is measured in tests/Feature/MagicLinkTest.php, which
+        // sets it back up for exactly that purpose.
         $app['config']->set('preference-center.magic_link.min_response_ms', 0);
     }
 
@@ -97,7 +102,7 @@ abstract class TestCase extends OrchestraTestCase
     {
         $router->middleware([
             'web',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            SubstituteBindings::class,
         ])->group(function ($router) {
             foreach (static::NAMES_A_SIBLING_MIGHT_USE as $name) {
                 $router->get('sibling-probe/'.$name.'/{'.$name.'}', fn ($value) => (string) $value);
@@ -110,8 +115,8 @@ abstract class TestCase extends OrchestraTestCase
             // own session migration, which is why that test follows the cookie
             // the response hands back rather than the one it sent.
             $router->get('pc-test/sign-in', function () {
-                \Illuminate\Support\Facades\Auth::login(
-                    new \Goldnead\PreferenceCenter\Tests\Fixtures\FixtureUser([
+                Auth::login(
+                    new FixtureUser([
                         'id' => 8100,
                         'email' => 'the-account@example.com',
                         'name' => 'The Account',

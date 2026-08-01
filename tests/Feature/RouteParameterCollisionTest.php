@@ -1,6 +1,7 @@
 <?php
 
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
+use Goldnead\PreferenceCenter\Tests\TestCase;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -38,6 +39,6 @@ it('claims no name a sibling would plausibly reach for', function () {
         ->values()
         ->all();
 
-    expect(array_intersect($ours, \Goldnead\PreferenceCenter\Tests\TestCase::NAMES_A_SIBLING_MIGHT_USE))->toBe([])
+    expect(array_intersect($ours, TestCase::NAMES_A_SIBLING_MIGHT_USE))->toBe([])
         ->and($ours)->toBe(['pcLink', 'pcToken']);
 });

@@ -2,6 +2,8 @@
 
 namespace Goldnead\PreferenceCenter\Sources;
 
+use Goldnead\Marketing\Models\Subscription;
+use Goldnead\Marketing\Services\SubscriptionPreferences;
 use Goldnead\PreferenceCenter\Data\Access;
 use Goldnead\PreferenceCenter\Data\ListRow;
 use Goldnead\PreferenceCenter\Support\EmailNormalizer;
@@ -18,9 +20,9 @@ use Goldnead\PreferenceCenter\Support\EmailNormalizer;
  */
 class MarketingSource extends Source
 {
-    public const SERVICE = \Goldnead\Marketing\Services\SubscriptionPreferences::class;
+    public const SERVICE = SubscriptionPreferences::class;
 
-    public const SUBSCRIPTION = \Goldnead\Marketing\Models\Subscription::class;
+    public const SUBSCRIPTION = Subscription::class;
 
     public function key(): string
     {

@@ -1,0 +1,49 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 18
+			path: config/preference-center.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, array\<string, int\|string\>\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Http/Controllers/MagicLinkController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, Goldnead\\PreferenceCenter\\Data\\Access\|null given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Http/Controllers/PreferenceCenterController.php
+
+		-
+			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Identity/ContactLookup.php
+
+		-
+			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$full_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Identity/ContactLookup.php
+
+		-
+			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$uuid\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Identity/ContactLookup.php
+
+		-
+			message: '#^Parameter \#1 \$view of method Illuminate\\Mail\\Mailable\:\:view\(\) expects view\-string, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/MagicLink/MagicLinkMail.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<\(int\|string\)\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Sources/NotificationsSource.php
