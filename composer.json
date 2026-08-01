@@ -21,32 +21,6 @@
         "issues": "https://github.com/goldnead/statamic-preference-center/issues",
         "source": "https://github.com/goldnead/statamic-preference-center"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-brand-context.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-identity-contracts.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-suppression.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-leadhub.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-marketing.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/goldnead/statamic-notifications.git"
-        }
-    ],
     "require": {
         "php": "^8.2",
         "goldnead/statamic-brand-context": "^1.4|^1.5",

@@ -1,7 +1,6 @@
 # Changelog
 
-## Unreleased
-
+## 1.3.0 — 2026-08-01
 ### The preference page is now owned here, and marketing asks for it
 
 Two packages were serving near-identical preference pages. That is decided: this one owns the page,
