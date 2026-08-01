@@ -1,4 +1,6 @@
+<!-- statamic:hide -->
 # Statamic Preference Center
+<!-- /statamic:hide -->
 
 **One page for everything a person receives.** The mailing lists they consented to, the product
 notifications they can switch per kind and per route, how often those arrive, and the blocks that
@@ -22,13 +24,57 @@ All three are `suggest`, not `require`. A host with only notifications gets a wo
 host with only marketing. That is not politeness — in the Hub this centre is set up for a brand whose
 mix is not the mix on the site it was first designed for.
 
+## It replaces marketing's preference page
+
+`goldnead/statamic-marketing` used to serve a preference page of its own at `/!/marketing/preferences/{token}`.
+It does not any more. **This package owns the preference page for the whole family**; marketing keeps
+only a one-click unsubscribe path that works whether or not this package is installed, and routes
+every preference link it writes through a resolver that prefers the page here.
+
+If you are installing this next to a marketing that predates the split, read
+[UPGRADE.md](UPGRADE.md) first. It is one page and it covers what happens to links already sitting in
+people's inboxes.
+
+## Requirements
+
+| | |
+|---|---|
+| PHP | 8.2 or newer |
+| Laravel | 12.40 or newer, or 13 |
+| Statamic | 6 |
+| Database | any Laravel-supported driver; this package owns no table of its own |
+
+Two hard requires, both from the same family: `goldnead/statamic-brand-context` and
+`goldnead/statamic-identity-contracts`. The three data sources — marketing, notifications,
+suppression — are all optional and detected at runtime.
+
 ## Install
+
+**Until the sibling packages are on Packagist, the `composer require` below is not enough on its own.**
+Composer only reads the `repositories` key of the *root* project, never of a package it installs as a
+dependency, so the entries in this package's `composer.json` do nothing for you. Add them to your own
+`composer.json` first:
+
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/goldnead/statamic-brand-context.git" },
+    { "type": "vcs", "url": "https://github.com/goldnead/statamic-identity-contracts.git" }
+]
+```
+
+Some of these repositories are private. Composer needs a GitHub token with read access to them:
+
+```bash
+composer config --global --auth github-oauth.github.com <token>
+```
+
+Then:
 
 ```bash
 composer require goldnead/statamic-preference-center
 ```
 
-The routes mount themselves under `!/preference-center`. Nothing else is required.
+The routes mount themselves under `!/preference-center`.
 
 ```bash
 php artisan vendor:publish --tag=preference-center-config
@@ -242,7 +288,70 @@ installed package and resolves it against a repository that has never heard of t
 exactly how `goldnead/statamic-leadhub` 1.8.0 shipped a delete button that did nothing.
 
 The token routes are registered only where marketing is installed, because their brand middleware
-names a marketing model.
+names a marketing model. The route table is therefore a function of what was installed at boot: after
+adding or removing `goldnead/statamic-marketing` on a host that runs `php artisan route:cache`, run
+`php artisan route:clear` or the cached table and reality disagree in silence.
+
+## The public contract
+
+Three things here are public interface, bound by semver from the release that introduced them (see
+[CHANGELOG.md](CHANGELOG.md)). Everything else in `src/` is free to change in a patch.
+
+### 1. The route names
+
+`preference-center.token`, `preference-center.show` and `preference-center.request`, also available as
+constants (`PreferenceCenter::ROUTE_TOKEN`, `::ROUTE_SHOW`, `::ROUTE_REQUEST`) so a sibling never has
+to type them.
+
+### 2. Link discovery — how another package sends someone here
+
+This is the interface `goldnead/statamic-marketing` uses to route its preference links at the combined
+page when it is installed, and at its own one-click path when it is not.
+
+```php
+use Goldnead\PreferenceCenter\PreferenceCenter;
+
+$url = class_exists(PreferenceCenter::class)
+    ? app(PreferenceCenter::class)->urlForToken($subscription->token)
+    : null;
+
+$url ??= route('marketing.unsubscribe', $subscription->token);   // the path that always works
+```
+
+| Method | Returns |
+|---|---|
+| `urlForToken(string $token): ?string` | Absolute URL of the combined page for the person a marketing subscription token names. `null` when this package cannot serve it. |
+| `requestUrl(): ?string` | Absolute URL of the magic-link door, for a sender holding no token. `null` when the routes are not mounted. |
+
+Two rules, both paid for already:
+
+- **Probe `class_exists()` on the class, never `method_exists()` on the facade.** A facade answers
+  through `__callStatic`, so `method_exists(Facades\PreferenceCenter::class, 'urlForToken')` is `false`
+  while the method exists — the reading that took every LeadHub action node down in
+  `goldnead/statamic-automations` v1.0.3. If you must probe a facade, probe its `getFacadeRoot()`.
+- **`null` means "use your own path".** It is returned when the routes are switched off, when
+  marketing is absent or disabled, or when the token is empty. A caller that ignores it publishes a
+  dead link into a mail nobody can recall.
+
+### 3. The `PreferencesChanged` event
+
+Fired once per accepted write, after it has been persisted:
+
+```php
+use Goldnead\PreferenceCenter\Events\PreferencesChanged;
+
+Event::listen(PreferencesChanged::class, function (PreferencesChanged $event) {
+    $event->access;          // Data\Access — identity, brand, proof
+    $event->changes;         // list<array{block, target, channel, to}> — only what actually changed
+    $event->consentProof();  // 'unsubscribe_token' | 'magic_link' | 'session'
+});
+```
+
+The package's own listener (`RecordPreferenceChange`) writes the audit line and, where LeadHub is
+installed, the contact-timeline entry. Yours runs alongside it.
+
+The `PreferenceCenter` facade (aliased as `PreferenceCenter`) exposes `view()`, `marketingCenter()`,
+`urlForToken()` and `requestUrl()`.
 
 ## Reading the page in a test
 
@@ -274,13 +383,42 @@ See `config/preference-center.php`. The values worth knowing:
 | `delivery.ignored_query_parameters` | `_se`, the five `utm_*`, `mc_cid`, `mc_eid`, `_hsenc`, `_hsmi`, `mkt_tok` | Left out of the signature check because a provider appends them. `expires` and `signature` cannot be added |
 | `audit.log_channel` | default channel | |
 
+## Personal data
+
+Nothing of its own. The page reads and writes through the packages that already own the values:
+subscriptions in `goldnead/statamic-marketing`, the type × channel matrix and the cadence in
+`goldnead/statamic-notifications`, the block state in `goldnead/statamic-suppression`. Deleting a
+person's data is done in those packages; there is no table here to clean up.
+
+What this package does add is an audit line per accepted change (`audit.log_channel`, pseudonymised)
+and — where LeadHub is installed — a contact-timeline entry. Both are switchable in
+`config/preference-center.php`. There is no telemetry and no outbound call of any kind other than the
+magic-link mail your own mailer sends.
+
+## Multi-brand
+
+Brand-aware, per brand, always derived from the door the visitor came through — never from the
+session. `SetBrandFromRouteValue` takes it from the subscription token, a magic link carries its brand
+sealed inside it, and the link-request page asks for it. A page that inherited the brand from whatever
+the browser last looked at would show one audience's lists to another's. Statamic *sites* (as distinct
+from brands) are not used by this package.
+
 ## Tests
 
 ```bash
 composer test
+composer lint                        # Pint, check only
+composer analyse                     # PHPStan level 5 with a baseline
 DB_DRIVER=mysql vendor/bin/pest      # the identical suite against a real server
 ```
 
-## License
+## Support
 
-MIT.
+Only the latest version is supported, against the Statamic major it targets. Bugs and questions go to
+[GitHub issues](https://github.com/goldnead/statamic-preference-center/issues); anything that turns out
+to be a core bug belongs in `statamic/cms`. Security reports do not go in a public issue — see
+[SECURITY.md](SECURITY.md).
+
+## Upgrading · Changelog · License
+
+[UPGRADE.md](UPGRADE.md) · [CHANGELOG.md](CHANGELOG.md) · MIT, see [LICENSE](LICENSE).

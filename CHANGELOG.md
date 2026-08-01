@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased
+
+### The preference page is now owned here, and marketing asks for it
+
+Two packages were serving near-identical preference pages. That is decided: this one owns the page,
+`goldnead/statamic-marketing` keeps only a one-click unsubscribe path that works whether or not this
+package is installed, and it routes every preference link through a resolver that prefers this page.
+
+**New — a discovery interface, semver-bound from this release.**
+`PreferenceCenter::urlForToken(string $token): ?string` and `PreferenceCenter::requestUrl(): ?string`,
+plus the route-name constants `ROUTE_TOKEN`, `ROUTE_SHOW` and `ROUTE_REQUEST`. `null` means "this
+package cannot serve that link here, use your own path" — returned when the routes are not mounted,
+when marketing is absent or switched off, or when the token is empty. Pinned by
+`tests/Feature/DiscoveryContractTest.php`, including the negative case that matters most: a sibling
+must probe `class_exists()` on the class, never `method_exists()` on the facade, which answers `false`
+through `__callStatic` and took every LeadHub action node down in
+`goldnead/statamic-automations` v1.0.3.
+
+**New — [UPGRADE.md](UPGRADE.md)**, with the cutover for a host that had marketing first: what happens
+to the links already sitting in people's inboxes, and the route-cache clear that is not optional here.
+
+### Major changes
+
+- **`statamic/cms` moved from `suggest` to `require` (`^6.0`).** It was never optional: this package
+  hard requires `goldnead/statamic-brand-context`, which hard requires `statamic/cms ^6.0`. There has
+  never been an installation without Statamic in it. `"type": "statamic-addon"` was the honest half of
+  that pair; the missing constraint was the dishonest one, and the Marketplace listing had no
+  compatibility metadata as a result.
+- **`laravel/framework` narrowed to `^12.40|^13.0`.** `^11.0` was unsatisfiable in practice — Statamic
+  6 requires `^12.40 || ^13.0` — and the whole Laravel 11 line is withdrawn over security advisories.
+  Nobody can have been running this on Laravel 11.
+- **`orchestra/testbench` narrowed to `^10.0|^11.0` and `pestphp/pest` to `^3.0|^4.0`**, for the same
+  reason: the lower halves of those ranges pair with Laravel versions this package can no longer
+  install. Dev-only, so no consumer is affected.
+
+### Also
+
+- `extra.statamic` now carries `slug`, `url`, `developer` and `developer-url`, so the manifest slug is
+  no longer `null` and the CP addon card has a developer link.
+- Pint, Larastan (level 5 with a baseline) and a `.gitattributes` that keeps tests and CI out of the
+  installed package.
+- CI grew the axes the constraints were always claiming: PHP × Laravel × `prefer-lowest|prefer-stable`,
+  a MySQL leg that finally uses the second connection in `tests/TestCase.php`, Pint, PHPStan and
+  addon-lint. The `SIBLING_REPOS_TOKEN || github.token` fallback is gone — it could never read a
+  private sibling and turned a missing secret into a Composer 404 that read like a network blip.
+- `composer.lock` is no longer tracked. A library's lock constrains nothing for consumers and published
+  the full private dependency graph into a repo that is going public.
+- `SECURITY.md`, a Requirements section, a support policy, and an install section that finally admits
+  the root-level `repositories` entries a consumer needs while the siblings are off Packagist.
+
 ## 1.2.0 — 2026-07-31
 
 One finding from a real end-to-end run on staging: a magic link requested there, mailed by Brevo, read
