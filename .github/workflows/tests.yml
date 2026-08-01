@@ -5,6 +5,14 @@ name: tests
 # package sits on top of six sibling packages, which is exactly where a
 # resolution that only works on one machine hides.
 
+# Kein COMPOSER_AUTH und kein Sibling-Token-Guard mehr: seit 01.08.2026 sind alle
+# goldnead-Geschwister oeffentlich und liegen auf Packagist, Composer laedt sie also
+# anonym. Vorher brach jeder Job hart ab, wenn SIBLING_REPOS_TOKEN fehlte -- das war
+# ehrlicher als ein Composer-404, aber das Secret existierte nie, also war die ganze
+# Suite rot. Und COMPOSER_AUTH mit leerem Token ist schlechter als gar keins: Composer
+# versucht dann JEDEN dist-Download zu authentifizieren und stirbt an
+# "Could not authenticate against github.com", auch bei fremden Paketen.
+
 on:
   push:
     branches: [main]
@@ -48,19 +56,7 @@ jobs:
       # no `|| github.token` fallback: that token cannot read another private
       # repo, so an unset secret used to surface as a Composer 404 that reads
       # like a network blip. Fail here instead, where the message is true.
-      - name: Require the sibling token
-        env:
-          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "SIBLING_REPOS_TOKEN is not set. The goldnead sibling packages are private;"
-            echo "Composer cannot read them without a PAT that has repo:read on them."
-            exit 1
-          fi
-
       - name: Install dependencies
-        env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-progress --no-interaction
@@ -101,14 +97,7 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Require the sibling token
-        env:
-          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
-        run: '[ -n "$TOKEN" ] || { echo "SIBLING_REPOS_TOKEN is not set."; exit 1; }'
-
       - name: Install dependencies
-        env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
         run: composer update --prefer-dist --no-progress --no-interaction
 
       - name: Run Pest against MySQL
@@ -137,14 +126,7 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Require the sibling token
-        env:
-          TOKEN: ${{ secrets.SIBLING_REPOS_TOKEN }}
-        run: '[ -n "$TOKEN" ] || { echo "SIBLING_REPOS_TOKEN is not set."; exit 1; }'
-
       - name: Install dependencies
-        env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.SIBLING_REPOS_TOKEN }}"}}'
         run: composer update --prefer-dist --no-progress --no-interaction
 
       - name: Validate composer.json
