@@ -51,24 +51,25 @@
         "php": "^8.2",
         "goldnead/statamic-brand-context": "^1.4|^1.5",
         "goldnead/statamic-identity-contracts": "^1.0",
-        "laravel/framework": "^11.0|^12.0|^13.0"
+        "laravel/framework": "^12.40|^13.0",
+        "statamic/cms": "^6.0"
     },
     "require-dev": {
         "goldnead/statamic-leadhub": "^1.10",
         "goldnead/statamic-marketing": "^1.8.1",
         "goldnead/statamic-notifications": "^1.1",
         "goldnead/statamic-suppression": "^1.0",
-        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
-        "pestphp/pest": "^2.0|^3.0|^4.0",
-        "pestphp/pest-plugin-laravel": "^2.0|^3.0|^4.0",
-        "statamic/cms": "^6.0"
+        "larastan/larastan": "^2.9|^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0"
     },
     "suggest": {
-        "goldnead/statamic-marketing": "Adds the mailing-list block. Without it the page still renders the other two.",
+        "goldnead/statamic-marketing": "Adds the mailing-list block, and with it the token door this package's preference links use.",
         "goldnead/statamic-notifications": "Adds the product-notification matrix and the cadence block.",
         "goldnead/statamic-suppression": "Adds the block state. Without it nothing is reported as blocked — install it before you trust the page.",
-        "goldnead/statamic-leadhub": "Lets a magic link and a session resolve to a contact, and records the audit trail on the contact timeline.",
-        "statamic/cms": "Required only when the host application is a Statamic site."
+        "goldnead/statamic-leadhub": "Lets a magic link and a session resolve to a contact, and records the audit trail on the contact timeline."
     },
     "autoload": {
         "psr-4": {
@@ -82,8 +83,12 @@
     },
     "extra": {
         "statamic": {
+            "slug": "preference-center",
             "name": "Preference Center",
-            "description": "One page for lists, product notifications, cadence and blocks."
+            "description": "One page for lists, product notifications, cadence and blocks.",
+            "url": "https://github.com/goldnead/statamic-preference-center",
+            "developer": "Adrian Goldner",
+            "developer-url": "https://gldnr.studio"
         },
         "laravel": {
             "providers": [
@@ -97,6 +102,12 @@
     "scripts": {
         "test": [
             "@php vendor/bin/pest"
+        ],
+        "lint": [
+            "@php vendor/bin/pint --test"
+        ],
+        "analyse": [
+            "@php vendor/bin/phpstan analyse"
         ]
     },
     "config": {

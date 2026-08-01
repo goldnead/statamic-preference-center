@@ -15,11 +15,17 @@ use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 /**
  * A plain Laravel provider, not a Statamic addon provider.
  *
- * This package has no control panel and no Antlers tags; it serves four public
- * URLs to people who have never seen a control panel. Extending Statamic's
- * provider would make `statamic/cms` a hard requirement for a page that does
- * not need it — the same call `goldnead/statamic-suppression` makes, for the
- * same reason.
+ * This package has no control panel, no fieldtypes and no Antlers tags; it
+ * serves four public URLs to people who have never seen a control panel. There
+ * is nothing for `AddonServiceProvider` to register, so extending it would buy
+ * a boot order this package does not use.
+ *
+ * What that decision is *not* is a way to avoid depending on Statamic. It used
+ * to be argued that way here, and the argument was false: this package hard
+ * requires `goldnead/statamic-brand-context`, which hard requires
+ * `statamic/cms`. There has never been an installation of this package without
+ * Statamic in it, which is why `statamic/cms` is now in `require` where it was
+ * always true, rather than in `suggest` where it read as optional.
  */
 class ServiceProvider extends LaravelServiceProvider
 {
