@@ -23,7 +23,15 @@
 
     @foreach ($links as $link)
         <div style="margin:0 0 24px;">
-            @if (count($links) > 1 && $link['brand'])
+            {{--
+                Named whenever the link has a brand, not only when several are
+                in one mail. Since 12.08.2026 each brand's link leaves in its
+                own mail under its own From, so "which of these is which" is no
+                longer answered by the list around it. A single-brand install
+                has no brand on the link and this stays absent, exactly as
+                before.
+            --}}
+            @if ($link['brand'])
                 <p style="margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#71717a;">{{ $link['brand'] }}</p>
             @endif
 

@@ -2,9 +2,12 @@
 
 namespace Goldnead\PreferenceCenter;
 
+use Goldnead\PreferenceCenter\Contracts\SenderIdentityResolver;
 use Goldnead\PreferenceCenter\Events\PreferencesChanged;
 use Goldnead\PreferenceCenter\Listeners\EndTheNoteOnLogin;
 use Goldnead\PreferenceCenter\Listeners\RecordPreferenceChange;
+use Goldnead\PreferenceCenter\Sending\BrandMailer;
+use Goldnead\PreferenceCenter\Sending\BrandSenderIdentity;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\NotificationsSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
@@ -41,6 +44,14 @@ class ServiceProvider extends LaravelServiceProvider
         foreach ([MarketingSource::class, NotificationsSource::class, SuppressionSource::class] as $source) {
             $this->app->singleton($source);
         }
+
+        // Who a magic link goes out as, and over which transport. Bound to an
+        // interface so a host that keeps sender identities somewhere other
+        // than `brands.settings.mail` rebinds it instead of patching the
+        // addon; the shipped implementation leaves a single-brand install
+        // sending exactly as before.
+        $this->app->singleton(SenderIdentityResolver::class, BrandSenderIdentity::class);
+        $this->app->singleton(BrandMailer::class);
 
         $this->app->singleton(PreferenceCenter::class);
         $this->app->alias(PreferenceCenter::class, 'preference-center');

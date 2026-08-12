@@ -40,7 +40,13 @@ class MagicLinkMail extends Mailable
     {
         $from = (array) config('preference-center.magic_link.from', []);
 
-        if (! empty($from['address'])) {
+        // Only when nobody has already decided. `build()` runs at delivery,
+        // after `BrandMailer` has put the brand's own address on the mailable,
+        // so an unguarded assignment here would quietly undo it — and the
+        // address is the half of the pair the relay checks against the account
+        // the transport belongs to. The config value stays what it always was:
+        // the answer for an install with no brand identity to read.
+        if (empty($this->from) && ! empty($from['address'])) {
             $this->from($from['address'], $from['name'] ?: null);
         }
 

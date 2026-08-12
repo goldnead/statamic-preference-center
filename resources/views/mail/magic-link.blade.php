@@ -6,7 +6,7 @@
 {{ __('preference-center::mail.magic_link_several') }}
 @endif
 @foreach ($links as $link)
-@if (count($links) > 1 && $link['brand'])
+@if ($link['brand'])
 
 {{ $link['brand'] }}:
 @else

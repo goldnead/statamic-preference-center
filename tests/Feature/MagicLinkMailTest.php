@@ -167,19 +167,34 @@ it('is still clickable when one address belongs to more than one brand', functio
 
     $this->post(route('preference-center.request.send'), ['email' => 'in-both@example.com']);
 
-    $message = sentMessage();
-    $html = $message->getHtmlBody();
+    // Two mails since 12.08.2026, one per brand, because each has to leave
+    // under its own From and its own transport — see the sibling case in
+    // MagicLinkTest. What this file still guards is the property it always
+    // guarded: whatever arrives, the links in it open.
+    $messages = collect(Mail::mailer()->getSymfonyTransport()->messages())
+        ->map(fn ($sent) => $sent->getOriginalMessage());
 
-    // Both brands named, both links present, and both of them open. A mail that
-    // lists two links and gets one of them wrong is worse than a mail with one.
-    preg_match_all('#href="([^"]*preference-center/link/[^"]+)"#', $html, $matches);
+    expect($messages)->toHaveCount(2);
 
-    expect($matches[1])->toHaveCount(2)
-        ->and($html)->toContain('Default')
-        ->and($html)->toContain('Second')
-        ->and($message->getTextBody())->toContain('Second');
+    $hrefs = [];
 
-    foreach ($matches[1] as $href) {
+    foreach ($messages as $message) {
+        preg_match_all('#href="([^"]*preference-center/link/[^"]+)"#', (string) $message->getHtmlBody(), $matches);
+
+        // One link per mail, and it is the one the mail names its brand by.
+        expect(array_unique($matches[1]))->toHaveCount(1);
+
+        $hrefs[] = $matches[1][0];
+    }
+
+    $bodies = $messages->map(fn ($m) => (string) $m->getHtmlBody())->implode("\n");
+    $texts = $messages->map(fn ($m) => (string) $m->getTextBody())->implode("\n");
+
+    expect($bodies)->toContain('Default')
+        ->and($bodies)->toContain('Second')
+        ->and($texts)->toContain('Second');
+
+    foreach ($hrefs as $href) {
         $this->flushSession();
         $this->get(html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
             ->assertRedirect(route('preference-center.show'));

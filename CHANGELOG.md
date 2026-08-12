@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.4.0 — 2026-08-12
+
+### Fixed — the magic link went out under the host's identity, not the brand's
+
+`MagicLinkRequests` ended in `Mail::to($email)->send(new MagicLinkMail($links))`: one mail carrying
+every brand's link, through the process-wide default mailer, with the process-wide `mail.from`. A
+mail that speaks for several brands has to pick one From, and on a host where each brand's domain
+is verified in its own relay account (Scaleway TEM, Postmark, SES) there is no correct pick — the
+provider refuses the address or substitutes its own, so the person who asked brand A about their
+settings hears from brand B.
+
+**One mail per brand now, each as that brand.** `Contracts\SenderIdentityResolver` answers "which
+mailer, which From, which locale for brand N" out of `brands.settings.mail`; `Sending\BrandMailer`
+is the single door the mail leaves through and puts the answer on the message
+(`Mailable::from()`, `Mail::mailer($name)`) rather than into config — Laravel burns `mail.from`
+into a mailer instance on first resolution and caches it for the life of the process, so a scoped
+`Config::set` would escape its own `finally`.
+
+**In the ordinary case nothing changes.** One brand knows the address, so one link, so one mail —
+the same mail as before, now over that brand's own transport. Only the rare address several brands
+know is split, and the split is what makes each part honest. The cost, stated plainly: such an
+address receives one mail per brand for one request, so the per-address ceiling becomes
+`max × brands-that-know-it`. Bounded by the host's brand list, not by anything a caller supplies,
+and every one of those mails comes from a sender the recipient already has a relationship with.
+
+### Changed — the mail names its brand whenever the link has one
+
+Previously only when several links shared one mail. With the links now in separate mails, that was
+the sentence that said which is which. A single-brand install has no brand on the link and the
+label stays absent, exactly as before.
+
+### Changed — a brand that declares a broken mail identity sends nothing
+
+A brand that declares `settings.mail` without `from_address`, or names a `mailer` that
+`config/mail.php` does not define, sends nothing and says so at error level, throttled per brand.
+Delivering under the host-wide From instead would be delivering under another brand's identity,
+quietly. The other brands that know the address still get their mail; `MagicLinkRequests::request()`
+returns the new outcome `misconfigured` only when none of them got out. Like every other outcome it
+is for logs and tests — the page says the same sentence whatever happened, which is the whole point
+of the endpoint.
+
+**A single-brand install is unchanged, and that is covered by a test rather than by intent.** So is
+a multi-brand install whose brands carry no `settings.mail`: both resolve to the config identity,
+including the package's own `preference-center.magic_link.from`. A host that keeps sender
+identities somewhere else rebinds `SenderIdentityResolver` in its own provider.
+
 ## 1.3.0 — 2026-08-01
 ### The preference page is now owned here, and marketing asks for it
 

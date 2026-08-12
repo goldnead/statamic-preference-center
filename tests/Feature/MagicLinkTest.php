@@ -286,10 +286,22 @@ it('narrows to the brand it was told, and treats an unknown handle as no hint at
     Mail::assertSent(MagicLinkMail::class, 1);
 });
 
-it('sends one mail with one link per brand, not one mail per brand', function () {
-    // A mailbox is one mailbox. Two brands that both know this address are not
-    // a reason to write to it twice, and the per-address limiter counts
-    // requests rather than brands, so it would not have caught it either.
+it('sends one mail per brand, each carrying only that brand\'s link', function () {
+    // This test said the opposite until 12.08.2026: one mail, every brand's
+    // link in it, "because a mailbox is one mailbox". That reasoning was sound
+    // about the mailbox and silent about the envelope. A mail speaking for
+    // several brands has to pick one From, and on a host where each brand's
+    // domain is verified in its own relay account there is no correct pick —
+    // the provider refuses the address or rewrites it, and the person asking
+    // brand A about their settings hears from brand B. So the split is not a
+    // convenience, it is the only shape in which each part is true.
+    //
+    // What it costs, stated plainly: an address several brands know now
+    // receives one mail per brand for one request. The per-address limiter
+    // still counts requests, so the ceiling is `max × brands-that-know-it` —
+    // bounded by the host's brand list, not by anything a caller supplies, and
+    // every one of those mails comes from a sender the recipient already has a
+    // relationship with. In the ordinary case, one brand, nothing changed.
     $this->enableMultiBrand();
     $this->makeBrand('default', 'Default');
     $this->makeBrand('second', 'Second');
@@ -305,14 +317,22 @@ it('sends one mail with one link per brand, not one mail per brand', function ()
 
     $this->post(route('preference-center.request.send'), ['email' => 'in-both@example.com']);
 
-    Mail::assertSent(MagicLinkMail::class, 1);
+    Mail::assertSent(MagicLinkMail::class, 2);
 
-    $links = sentLinks();
+    $perMail = [];
 
-    expect($links)->toHaveCount(2)
-        ->and(array_map(fn ($link) => brandOfLink($link['url']), $links))
+    Mail::assertSent(MagicLinkMail::class, function ($mail) use (&$perMail) {
+        $perMail[] = $mail->links;
+
+        return true;
+    });
+
+    // One link each, the two brands in id order, and each link really issued
+    // for the brand whose mail carries it.
+    expect(array_map('count', $perMail))->toBe([1, 1])
+        ->and(array_map(fn ($links) => brandOfLink($links[0]['url']), $perMail))
         ->toBe(Brand::query()->orderBy('id')->pluck('id')->all())
-        ->and(array_column($links, 'brand'))->toBe(['Default', 'Second']);
+        ->and(array_map(fn ($links) => $links[0]['brand'], $perMail))->toBe(['Default', 'Second']);
 });
 
 it('counts one mailbox once, however many brands the host runs', function () {

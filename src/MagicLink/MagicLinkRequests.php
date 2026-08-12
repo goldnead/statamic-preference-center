@@ -4,11 +4,11 @@ namespace Goldnead\PreferenceCenter\MagicLink;
 
 use Goldnead\BrandContext\Models\Brand;
 use Goldnead\Leadhub\Contracts\Repositories\ContactRepository;
+use Goldnead\PreferenceCenter\Sending\BrandMailer;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
 use Goldnead\PreferenceCenter\Support\EmailNormalizer;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -34,6 +34,8 @@ use Illuminate\Support\Facades\RateLimiter;
  * listed.
  *
  * **The address names the brand, not the visitor.** See `brandsToSearch()`.
+ *
+ * **Each brand's link leaves under that brand's own identity.** See `mail()`.
  */
 class MagicLinkRequests
 {
@@ -41,14 +43,16 @@ class MagicLinkRequests
         protected LinkTokenizer $tokenizer,
         protected MarketingSource $marketing,
         protected SuppressionSource $suppression,
+        protected ?BrandMailer $mailer = null,
     ) {}
 
     /**
      * @param  int|null  $brandId  the brand the visitor named, or null for "none
      *                             was named" — which is the ordinary case, because
      *                             the form has no brand field.
-     * @return string one of `sent`, `unknown`, `blocked`, `throttled`, `disabled`
-     *                — for logs and tests. It never reaches the visitor.
+     * @return string one of `sent`, `unknown`, `blocked`, `throttled`,
+     *                `disabled`, `misconfigured` — for logs and tests. It never
+     *                reaches the visitor.
      */
     public function request(?string $rawEmail, string $origin, ?int $brandId = null): string
     {
@@ -76,9 +80,57 @@ class MagicLinkRequests
             return 'blocked';
         }
 
-        Mail::to($email)->send(new MagicLinkMail($found['links']));
+        return $this->mail($email, $found['links']);
+    }
 
-        return 'sent';
+    /**
+     * One mail per brand, each as that brand.
+     *
+     * Until 12.08.2026 this was a single `Mail::to($email)->send(...)` carrying
+     * every brand's link at once — process-wide default mailer, process-wide
+     * From. On a multi-brand host that is a mail about brand B's preferences
+     * arriving under brand A's name, and where the transport verifies sending
+     * domains per account (Scaleway TEM, Postmark, SES) it is a mail that is
+     * refused outright or rewritten to whichever identity the shared account
+     * owns. There is no correct single sender for a mail that speaks for
+     * several brands, so it stops being one mail.
+     *
+     * **In the ordinary case nothing changes.** One brand knows the address, so
+     * one link, so one mail — byte for byte the mail it was, now sent through
+     * that brand's own transport. Only the rare address that several brands
+     * know is split, and the split is what makes each part honest.
+     *
+     * The cost is that such an address now receives N mails for one request
+     * where it used to receive one. The per-address limiter still counts
+     * requests, so the ceiling rises from `max` to `max × brands-that-know-it`
+     * — bounded by the number of brands on the host, not by anything a caller
+     * controls, and every one of those mails is one the recipient has a
+     * relationship with. The alternative is the mail that lies about who sent
+     * it.
+     *
+     * A brand that cannot produce a sender identity sends nothing and says so
+     * in the log; the others still go. `misconfigured` comes back only when
+     * *none* got out, and like every other outcome it stays out of the
+     * response.
+     *
+     * @param  list<array{url:string, brand:?string, brand_id:?int}>  $links
+     */
+    protected function mail(string $email, array $links): string
+    {
+        $sent = 0;
+
+        foreach ($links as $link) {
+            if ($this->mailer()->send($link['brand_id'], $email, null, new MagicLinkMail([$link]))) {
+                $sent++;
+            }
+        }
+
+        return $sent > 0 ? 'sent' : 'misconfigured';
+    }
+
+    protected function mailer(): BrandMailer
+    {
+        return $this->mailer ??= app(BrandMailer::class);
     }
 
     /**
@@ -144,7 +196,7 @@ class MagicLinkRequests
      * stay different lines in the log. The visitor gets the same sentence for
      * both, which is the point of the endpoint.
      *
-     * @return array{known:bool, links:list<array{url:string, brand:?string}>}
+     * @return array{known:bool, links:list<array{url:string, brand:?string, brand_id:?int}>}
      */
     protected function lookUp(string $email, ?int $brandId): array
     {
@@ -175,6 +227,10 @@ class MagicLinkRequests
                 $links[] = [
                     'url' => $this->tokenizer->issue($email, (int) $manager->currentId()),
                     'brand' => $brand?->name,
+                    // Which brand pays for this link's postage. `$brand` is
+                    // null in a single-brand install, and null is exactly what
+                    // the resolver wants there: "no brand, use the config".
+                    'brand_id' => $brand?->getKey() === null ? null : (int) $brand->getKey(),
                 ];
             };
 
