@@ -1,9 +1,9 @@
 <?php
 
+use Goldnead\BrandContext\Sending\SaidRecently;
+use Goldnead\BrandContext\Sending\SenderIdentity;
 use Goldnead\PreferenceCenter\Contracts\SenderIdentityResolver;
 use Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests;
-use Goldnead\PreferenceCenter\Sending\SaidRecently;
-use Goldnead\PreferenceCenter\Sending\SenderIdentity;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.0 — 2026-08-12
+### Changed
+
+- **The five sender-identity classes moved to `goldnead/statamic-brand-context` 1.8.0**, which is
+  now required at `^1.8`. They were four byte-identical copies with four namespaces — this package,
+  marketing, notifications and automations each grew their own on 12.08.2026 — and copies drift: by
+  the evening the marketing one had stopped refusing a transport without an address. Which address a
+  brand sends under is a property of the brand, so the rule lives with the brand.
+
+  Behaviour is unchanged here, down to the log lines. `Goldnead\PreferenceCenter\Contracts\SenderIdentityResolver`
+  and `Sending\BrandMailer` stay as this package's own extension points. `Sending\SenderIdentity`
+  and `Sending\SaidRecently` are gone from this namespace; use the `Goldnead\BrandContext\Sending\`
+  versions.
+
 ## 1.4.0 — 2026-08-12
 
 ### Fixed — the magic link went out under the host's identity, not the brand's
