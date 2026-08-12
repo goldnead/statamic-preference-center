@@ -29,8 +29,8 @@
         "statamic/cms": "^6.0"
     },
     "require-dev": {
-        "goldnead/statamic-leadhub": "^1.10",
-        "goldnead/statamic-marketing": "^1.8.1",
+        "goldnead/statamic-leadhub": "^1.10|^2.0",
+        "goldnead/statamic-marketing": "^1.8.1|^2.0",
         "goldnead/statamic-notifications": "^1.1",
         "goldnead/statamic-suppression": "^1.0",
         "larastan/larastan": "^2.9|^3.0",

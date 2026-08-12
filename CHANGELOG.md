@@ -45,6 +45,14 @@ of the endpoint.
 a multi-brand install whose brands carry no `settings.mail`: both resolve to the config identity,
 including the package's own `preference-center.magic_link.from`. A host that keeps sender
 identities somewhere else rebinds `SenderIdentityResolver` in its own provider.
+## 1.3.1 — 2026-08-09
+
+### Fixed — the sibling constraint excluded the new majors
+
+`goldnead/statamic-leadhub` (`^1.10`) and `goldnead/statamic-marketing` (`^1.8.1`) were pinned to the 1.x line. LeadHub 2.0.0 and Marketing 2.0.0 carry no code change over 1.12.2
+and 1.13.0 — that major is the licence switch alone. A site running both this package and an
+updated sibling could not resolve its dependencies at all. The constraints now accept both
+lines.
 
 ## 1.3.0 — 2026-08-01
 ### The preference page is now owned here, and marketing asks for it
