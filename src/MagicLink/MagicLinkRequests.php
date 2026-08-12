@@ -28,6 +28,15 @@ use Illuminate\Support\Facades\RateLimiter;
  * client mail ten thousand different people, per-origin alone lets ten thousand
  * clients mail one person.
  *
+ * The per-address limiter counts *requests*, and since 12.08.2026 one request
+ * can be more than one mail: one per brand that knows the address (see
+ * `mail()`). The real ceiling on a mailbox is therefore
+ * `per_address.max × brands-that-know-it`, not `per_address.max`. Bounded by the
+ * host's brand list rather than by anything a caller supplies, and every one of
+ * those mails comes from a sender the recipient has a relationship with — but
+ * a host running many brands should set `per_address.max` with that multiplier
+ * in mind.
+ *
  * **A blocked address is not written to.** The gate exists because a mailbox
  * bounced or its owner complained. "Here is your link to manage preferences" is
  * still mail, and sending it to that mailbox is the behaviour that gets a domain
@@ -36,6 +45,14 @@ use Illuminate\Support\Facades\RateLimiter;
  * **The address names the brand, not the visitor.** See `brandsToSearch()`.
  *
  * **Each brand's link leaves under that brand's own identity.** See `mail()`.
+ * One consequence is worth stating where somebody reasons about the timing
+ * floor: the sends are sequential, so the response time now scales with the
+ * number of brands that know the address. The floor in `MagicLinkController`
+ * is a floor and not a ceiling, and it never claimed to cap a slow mailer —
+ * but "several brands know this address" is now, in principle, readable off a
+ * stopwatch where it was not before. At three requests per address per hour
+ * that is not a usable oracle, and it is the price of not lying about who
+ * sent the mail.
  */
 class MagicLinkRequests
 {
