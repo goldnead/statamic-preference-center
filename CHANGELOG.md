@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.1 — 2026-08-13
+
+### Changed — the German strings now use „du", like the rest of this family
+
+This package was the only one of the goldnead addons whose German addressed the reader formally
+(„Ihr Link zu den E-Mail-Einstellungen", „kopieren Sie diese Adresse"). `statamic-marketing` and
+`statamic-notifications` have always used „du". On a host running all three, the same person got a
+„du" confirmation mail and a „Sie" preferences link — and the preferences page they landed on
+switched back again.
+
+Both German files are converted: `resources/lang/de/mail.php` (the magic-link mail) and
+`resources/lang/de/public.php` (the page that link opens). **Wording only.** Sentence structure,
+order, placeholders and keys are untouched; only the form of address changed. The one remaining
+„Sie" in `lists_hint` is the pronoun for „E-Mails", not an address.
+
+English is unchanged. Nothing in `src/` or in the views changed, so no behaviour did.
+
 ## 1.5.0 — 2026-08-12
 ### Changed
 
