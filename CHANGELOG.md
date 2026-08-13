@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.2 — 2026-08-13
+
+### Added — a test holds the informal address, and the way back is documented
+
+1.5.1 changed the German wording and left the net for it in the host that had reported the
+problem. That is the wrong place for a package's own guarantee: a refactor here, or a fresh
+installation, would not notice the register switching back.
+
+`tests/Feature/GermanFormOfAddressTest.php` checks every German string in `de/` for formal
+address forms. It matches the shapes the formal register actually uses rather than snapshotting
+sentences, so rewording stays free and switching back to „Sie" does not — and it distinguishes
+the address „Sie" from the plural pronoun „sie", which appears in these files legitimately
+(„Redaktionelle E-Mails. Sie beruhen auf deiner Einwilligung") and has to stay. Checked against
+the 1.5.0 files: three of the four assertions fail there.
+
+An installation that prefers the formal register publishes the translations and edits them:
+`php artisan vendor:publish --tag=preference-center-translations`. Wording is not part of this
+package's public contract (see the README), which is why 1.5.1 was a patch release.
+
 ## 1.5.1 — 2026-08-13
 
 ### Changed — the German strings now use „du", like the rest of this family
