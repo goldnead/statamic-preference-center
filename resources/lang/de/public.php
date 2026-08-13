@@ -3,6 +3,10 @@
 /*
  * Diese Seite sieht jemand, der gerade etwas abbestellen wollte. Kurz, sachlich,
  * ohne Werbung und ohne Rückgewinnungsversuche.
+ *
+ * Geduzt, aus demselben Grund wie `de/mail.php`: die Mail, die hierher führt,
+ * duzt. Ein Wechsel der Anrede zwischen Link und Zielseite ist genau die Art
+ * Bruch, die eine Seite unecht wirken lässt.
  */
 
 return [
@@ -11,7 +15,7 @@ return [
     'intro' => 'Diese Einstellungen gelten für :email.',
 
     'lists_heading' => 'Verteiler',
-    'lists_hint' => 'Redaktionelle E-Mails. Sie beruhen auf Ihrer Einwilligung und können jederzeit beendet werden.',
+    'lists_hint' => 'Redaktionelle E-Mails. Sie beruhen auf deiner Einwilligung und können jederzeit beendet werden.',
     'lists_empty' => 'Für diese Adresse ist derzeit kein Verteiler eingerichtet.',
     'lists_blocked' => 'Der Versand an diese Adresse ist gesperrt. Eine Anmeldung ist hier nicht möglich.',
 
@@ -27,7 +31,7 @@ return [
 
     'frequency_heading' => 'Häufigkeit',
     'frequency_hint' => 'Gilt für alle abschaltbaren Benachrichtigungen unten. Eine Änderung hier setzt deren E-Mail- und Sammelmail-Einstellung neu.',
-    'frequency_mixed' => 'Derzeit gemischt: einige Benachrichtigungen kommen sofort, andere gesammelt. Wählen Sie eine Option, um das zu vereinheitlichen.',
+    'frequency_mixed' => 'Derzeit gemischt: einige Benachrichtigungen kommen sofort, andere gesammelt. Wähle eine Option, um das zu vereinheitlichen.',
     'frequency_immediate' => 'Sofort',
     'frequency_immediate_desc' => 'Jede Benachrichtigung kommt einzeln, sobald sie entsteht.',
     'frequency_daily' => 'Täglich',
@@ -35,9 +39,9 @@ return [
     'frequency_weekly' => 'Wöchentlich',
     'frequency_weekly_desc' => 'Einmal in der Woche gesammelt.',
     'frequency_never' => 'Nie',
-    'frequency_never_desc' => 'Keine E-Mails zu Produkt-Benachrichtigungen. Im Produkt sehen Sie sie weiterhin.',
+    'frequency_never_desc' => 'Keine E-Mails zu Produkt-Benachrichtigungen. Im Produkt siehst du sie weiterhin.',
 
-    'suppression_blocked' => 'An diese Adresse wird derzeit nicht zugestellt. Der Grund liegt beim Postfach selbst, etwa eine Rückläufer- oder Beschwerdemeldung. Diese Sperre lässt sich hier nicht aufheben; abmelden können Sie sich weiterhin.',
+    'suppression_blocked' => 'An diese Adresse wird derzeit nicht zugestellt. Der Grund liegt beim Postfach selbst, etwa eine Rückläufer- oder Beschwerdemeldung. Diese Sperre lässt sich hier nicht aufheben; abmelden kannst du dich weiterhin.',
     'suppression_unavailable' => 'Der Sperrstatus dieser Adresse ist gerade nicht abfragbar. Solange das so ist, wird nichts freigeschaltet, was gesperrt sein könnte.',
 
     'save' => 'Einstellungen speichern',
@@ -56,12 +60,12 @@ return [
 
     'nothing_installed' => 'Für diese Adresse ist hier nichts einzustellen.',
 
-    'proof_unsubscribe_token' => 'Sie sind über den Link aus einer E-Mail hier. Jede Änderung wird mit diesem Nachweis protokolliert.',
-    'proof_magic_link' => 'Sie sind über einen angeforderten Link hier. Jede Änderung wird mit diesem Nachweis protokolliert.',
-    'proof_session' => 'Sie sind angemeldet. Jede Änderung wird mit diesem Nachweis protokolliert.',
+    'proof_unsubscribe_token' => 'Du bist über den Link aus einer E-Mail hier. Jede Änderung wird mit diesem Nachweis protokolliert.',
+    'proof_magic_link' => 'Du bist über einen angeforderten Link hier. Jede Änderung wird mit diesem Nachweis protokolliert.',
+    'proof_session' => 'Du bist angemeldet. Jede Änderung wird mit diesem Nachweis protokolliert.',
 
     'request_title' => 'Einstellungen aufrufen',
-    'request_intro' => 'Geben Sie Ihre Adresse ein. Wenn wir sie erreichen können, schicken wir einen Link zu Ihren Einstellungen.',
+    'request_intro' => 'Gib deine Adresse ein. Wenn wir sie erreichen können, schicken wir einen Link zu deinen Einstellungen.',
     'request_label' => 'E-Mail-Adresse',
     'request_placeholder' => 'name@beispiel.de',
     'request_button' => 'Link schicken',
