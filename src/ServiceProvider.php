@@ -10,6 +10,7 @@ use Goldnead\PreferenceCenter\Sending\BrandMailer;
 use Goldnead\PreferenceCenter\Sending\BrandSenderIdentity;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\NotificationsSource;
+use Goldnead\PreferenceCenter\Sources\SequencesSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
@@ -41,7 +42,7 @@ class ServiceProvider extends LaravelServiceProvider
         // console command, where nothing has booted a view layer yet.
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'preference-center');
 
-        foreach ([MarketingSource::class, NotificationsSource::class, SuppressionSource::class] as $source) {
+        foreach ([MarketingSource::class, NotificationsSource::class, SuppressionSource::class, SequencesSource::class] as $source) {
             $this->app->singleton($source);
         }
 

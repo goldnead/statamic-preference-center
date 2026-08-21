@@ -93,6 +93,41 @@
             </div>
         @endif
 
+        {{--
+            Serien: der einzige Block mit einer Zwischenstufe.
+
+            Listen sind An/Aus fuer ein ganzes Thema, die Frequenz gilt fuer
+            alles. Eine Serie kann man verlassen, ohne den Rest aufzugeben —
+            und genau das ist der Fall, den jemand meint, der eine
+            Willkommensstrecke nicht zu Ende lesen will.
+
+            Verlassene Serien bleiben in der Liste, nur ohne Haken. Ohne sie
+            waere der Block nach dem Ausstieg leer und der Weg zurueck
+            nirgends zu finden.
+        --}}
+        @if ($view->hasSequences())
+            <input type="hidden" name="blocks[]" value="sequences">
+            <div class="block" data-block="sequences">
+                <h2>{{ __('preference-center::public.sequences_heading') }}</h2>
+                <p class="hint">{{ __('preference-center::public.sequences_hint') }}</p>
+
+                <ul class="list">
+                    @foreach ($view->sequences as $row)
+                        <li class="row" data-sequence="{{ $row->uuid }}">
+                            <label>
+                                <input type="checkbox" name="sequences[]" value="{{ $row->uuid }}"
+                                    @checked(! $row->opted_out)>
+                                <span class="name">{{ $row->name }}</span>
+                            </label>
+                            @if ($row->opted_out)
+                                <span class="desc">{{ __('preference-center::public.sequences_left') }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         @if ($view->hasFrequency())
             <input type="hidden" name="blocks[]" value="frequency">
             <div class="block" data-block="frequency" data-frequency="{{ $view->frequency }}">

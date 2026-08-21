@@ -72,4 +72,7 @@ return [
     'request_foot' => 'Der Link gilt :minutes Minuten und führt nur zu diesen Einstellungen.',
     'magic_link_sent' => 'Wenn wir diese Adresse erreichen können, ist ein Link unterwegs. Aus Datenschutzgründen sagen wir an dieser Stelle nicht, ob eine Adresse bei uns bekannt ist.',
 
+    'sequences_heading' => 'Serien',
+    'sequences_hint' => 'Mehrteilige E-Mail-Strecken. Du kannst eine einzelne beenden, ohne alles andere abzubestellen.',
+    'sequences_left' => 'beendet',
 ];

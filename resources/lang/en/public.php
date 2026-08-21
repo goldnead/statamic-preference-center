@@ -68,4 +68,7 @@ return [
     'request_foot' => 'The link is valid for :minutes minutes and leads only to these preferences.',
     'magic_link_sent' => 'If we can reach this address, a link is on its way. For privacy reasons we do not say here whether an address is known to us.',
 
+    'sequences_heading' => 'Series',
+    'sequences_hint' => 'Multi-part email series. You can leave one without unsubscribing from anything else.',
+    'sequences_left' => 'stopped',
 ];

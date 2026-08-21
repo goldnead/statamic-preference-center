@@ -47,6 +47,7 @@ class PreferenceWriter
         $this->saveLists($access, $view, $result, $input['lists'] ?? null);
         $this->saveFrequency($access, $view, $result, $input['frequency'] ?? null);
         $this->saveTypes($access, $view, $result, $input['types'] ?? null);
+        $this->saveSequences($access, $view, $result, $input['sequences'] ?? null);
 
         $this->announce($access, $result);
 
@@ -89,6 +90,41 @@ class PreferenceWriter
      *
      * @param  array<int,string>|null  $wanted
      */
+    /**
+     * Der Ausstieg aus einzelnen Serien.
+     *
+     * Die uebergebene Liste sind die ANGEKREUZTEN, also die gewuenschten — wie
+     * bei den Listen daneben und aus demselben Grund: eine nicht angekreuzte
+     * Box schickt der Browser gar nicht mit, also kann nur das Vorhandene
+     * etwas bedeuten. Was fehlt, wird abbestellt.
+     *
+     * Ohne Block auf der Seite passiert nichts. Das ist wichtiger als es
+     * aussieht: ein leeres `sequences` von einem Formular, das den Block gar
+     * nicht gezeigt hat, wuerde sonst jede laufende Serie beenden.
+     */
+    protected function saveSequences(Access $access, PreferenceView $view, WriteResult $result, ?array $wanted): void
+    {
+        if ($wanted === null) {
+            return;
+        }
+
+        if (! $view->hasSequences()) {
+            $result->refused('sequences', 'source_absent');
+
+            return;
+        }
+
+        $outcome = $this->center->sequences->apply($access, array_values(array_filter($wanted, 'is_string')));
+
+        foreach ($outcome['left'] as $uuid) {
+            $result->changed('sequences', (string) $uuid, false);
+        }
+
+        foreach ($outcome['rejoined'] as $uuid) {
+            $result->changed('sequences', (string) $uuid, true);
+        }
+    }
+
     protected function saveLists(Access $access, PreferenceView $view, WriteResult $result, ?array $wanted): void
     {
         if ($wanted === null) {

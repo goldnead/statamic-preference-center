@@ -119,6 +119,7 @@ class PreferenceCenterController extends Controller
             'lists' => in_array('lists', $blocks, true) ? ($data['lists'] ?? []) : null,
             'types' => in_array('types', $blocks, true) ? $this->normaliseTypes($data['types'] ?? []) : null,
             'frequency' => in_array('frequency', $blocks, true) ? ($data['frequency'] ?? null) : null,
+            'sequences' => in_array('sequences', $blocks, true) ? ($data['sequences'] ?? []) : null,
         ], fn ($value) => $value !== null));
 
         return redirect($back)

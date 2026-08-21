@@ -35,6 +35,7 @@ return [
         'marketing' => env('PREFERENCE_CENTER_SOURCE_MARKETING', 'auto'),
         'notifications' => env('PREFERENCE_CENTER_SOURCE_NOTIFICATIONS', 'auto'),
         'suppression' => env('PREFERENCE_CENTER_SOURCE_SUPPRESSION', 'auto'),
+        'sequences' => env('PREFERENCE_CENTER_SOURCE_SEQUENCES', 'auto'),
     ],
 
     /*

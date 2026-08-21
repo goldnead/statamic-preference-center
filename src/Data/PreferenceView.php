@@ -25,6 +25,15 @@ final class PreferenceView
         public readonly array $channels,
         public readonly ?string $frequency,
         public readonly SuppressionState $suppression,
+
+        /**
+         * Die Serien, in denen diese Person steckt — oder `null`, wenn das
+         * Automations-Addon fehlt. Siehe SequencesSource::rows() zum
+         * Unterschied zwischen `null` und `[]`.
+         *
+         * @var array<int, object{uuid:string, name:string, opted_out:bool}>|null
+         */
+        public readonly ?array $sequences = null,
     ) {}
 
     public function hasLists(): bool
@@ -35,6 +44,11 @@ final class PreferenceView
     public function hasTypes(): bool
     {
         return $this->types !== null;
+    }
+
+    public function hasSequences(): bool
+    {
+        return is_array($this->sequences) && $this->sequences !== [];
     }
 
     public function hasFrequency(): bool

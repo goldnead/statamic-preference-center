@@ -6,6 +6,7 @@ use Goldnead\PreferenceCenter\Data\Access;
 use Goldnead\PreferenceCenter\Data\PreferenceView;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Goldnead\PreferenceCenter\Sources\NotificationsSource;
+use Goldnead\PreferenceCenter\Sources\SequencesSource;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,7 @@ class PreferenceCenter
         public readonly MarketingSource $marketing,
         public readonly NotificationsSource $notifications,
         public readonly SuppressionSource $suppression,
+        public readonly SequencesSource $sequences,
     ) {}
 
     public function view(Access $access): PreferenceView
@@ -87,6 +89,7 @@ class PreferenceCenter
             channels: $this->notifications->channels(),
             frequency: $this->notifications->frequency($access, $types),
             suppression: $suppression,
+            sequences: $this->sequences->rows($access),
         );
     }
 
