@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.1 — 2026-08-22
+
+### Fixed — der leere Benachrichtigungs-Block stand mit einem falschen Satz da
+
+Seit `goldnead/statamic-notifications` 1.7 die Arten nach Zuständigkeit
+filtert, kommt eine leere Liste regelmäßig vor: eine Newsletter-Adresse ohne
+Konto hat schlicht keine Benachrichtigungen einzustellen. Der Block wurde
+trotzdem gezeichnet — mit der Zeile „Diese Installation kennt keine
+Benachrichtigungsarten", die dann doppelt falsch war: die Installation kennt
+sehr wohl welche, und dem Leser hilft der Satz ohnehin nicht.
+
+`hasTypes()` verlangt jetzt Zeilen, nicht nur ein vorhandenes Array. Für den
+Menschen davor sind „keine registriert" und „keine für dich" dasselbe: es gibt
+nichts einzustellen, und eine Überschrift ohne Inhalt ist schlimmer als keine.
+
 ## 1.6.0 — 2026-08-22
 
 ### Added — laufende Serien verlassen

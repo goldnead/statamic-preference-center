@@ -41,9 +41,23 @@ final class PreferenceView
         return $this->lists !== null;
     }
 
+    /**
+     * Ein Block ohne Zeilen ist kein Block.
+     *
+     * Frueher konnte `[]` nur eins heissen: diese Installation hat gar keine
+     * Benachrichtigungsarten registriert — und dafuer stand ein erklaerender
+     * Satz im Block. Seit die Arten nach Zustaendigkeit gefiltert werden
+     * (notifications 1.7), heisst `[]` viel oefter „keine davon gilt fuer
+     * dich", und dann ist derselbe Satz schlicht falsch: die Installation
+     * kennt sehr wohl welche.
+     *
+     * Fuer den Menschen davor sind beide Faelle ohnehin dasselbe — es gibt
+     * nichts einzustellen. Eine Ueberschrift ohne Inhalt ist schlimmer als
+     * keine.
+     */
     public function hasTypes(): bool
     {
-        return $this->types !== null;
+        return is_array($this->types) && $this->types !== [];
     }
 
     public function hasSequences(): bool
