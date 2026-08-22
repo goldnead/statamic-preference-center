@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.6.0 — 2026-08-22
+
+### Added — laufende Serien verlassen
+
+Der vierte Block, und der einzige mit einer Zwischenstufe. Listen sind An/Aus
+für ein ganzes Thema, die Frequenz gilt für alles — eine Serie ist ein
+einzelner Strang, den man verlassen kann, ohne den Rest aufzugeben. Genau das
+ist der Fall, den jemand meint, der eine Willkommensstrecke nicht zu Ende lesen
+will.
+
+Gezeigt werden laufende Serien (ein Lauf wartet noch auf seinen nächsten
+Schritt) **und bereits verlassene**. Ohne die verlassenen wäre der Block nach
+dem Ausstieg leer und der Weg zurück nirgends zu finden.
+
+Wie die drei anderen Quellen über `class_exists` geschützt: ohne
+`goldnead/statamic-automations` gibt es keine Serien und damit keinen Block.
+Abschaltbar über `preference-center.sources.sequences`.
+
 ## 1.5.2 — 2026-08-13
 
 ### Added — a test holds the informal address, and the way back is documented
