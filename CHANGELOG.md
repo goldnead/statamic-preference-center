@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.6.2 — 2026-08-23
+
+### Fixed — ein Mensch, eine Einstellung, egal durch welche Tür
+
+Ein Besuch über den Mail-Link wurde immer als **Kontakt** aufgelöst, auch bei
+jemandem, der ein Konto hat. Das hatte zwei Folgen, und beide sind Fehler:
+
+- `notification_preferences` hängt an `(user_id, contact_uuid)`. Wer über den
+  Mail-Link etwas einstellte, schrieb in eine andere Zeile als angemeldet —
+  derselbe Mensch, zwei Einstellungssätze, keiner sah den anderen. Das war
+  schon vor dieser Reihe so und fiel nur niemandem auf.
+- Seit 1.6.1 die Arten nach Zuständigkeit filtert, verschwanden über den
+  Mail-Link zusätzlich alle Einstellungen, die ein Konto voraussetzen.
+
+Findet sich zu der Adresse ein Konto, wird der Besuch jetzt als dieses Konto
+aufgelöst — dieselbe Kennung wie beim Anmelden. Mehr darf dabei niemand: der
+Token beweist ohnehin die Verfügung über das Postfach, und
+`canStoreNotificationPreferences()` hing nie am Kontotyp, sondern nur daran,
+ob die Person überhaupt einzuordnen ist.
+
+Gefunden in einem Nutzertest mit einem echten Konto — kein Test hätte das
+treffen können, weil keiner je einen Nutzer anlegte.
+
+### Fixed — die Testsuite hing von früheren Läufen ab
+
+`statamic.users.repository` steht in der Suite auf `file`, und der Treiber
+schreibt echte YAML-Dateien. Die Datenbank wird zwischen Tests zurückgesetzt,
+diese Dateien nicht. Solange kein Test Nutzer anlegte, blieb das folgenlos;
+mit dem ersten, der es tut, fielen prompt drei fremde Tests um. `setUp()` räumt
+das Verzeichnis jetzt aus.
+
 ## 1.6.1 — 2026-08-22
 
 ### Fixed — der leere Benachrichtigungs-Block stand mit einem falschen Satz da

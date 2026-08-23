@@ -8,6 +8,7 @@ use Goldnead\PreferenceCenter\Data\Access;
 use Goldnead\PreferenceCenter\Proof;
 use Goldnead\PreferenceCenter\Sources\MarketingSource;
 use Illuminate\Http\Request;
+use Statamic\Facades\User as StatamicUser;
 
 /**
  * Three doors, one `Identity`.
@@ -56,9 +57,7 @@ class AccessResolver
 
         $email = (string) $subscription->email;
 
-        $identity = $subscription->contact_uuid
-            ? Identity::contact((string) $subscription->contact_uuid, $email, $this->nameOf($subscription))
-            : ($this->contacts->byEmail($email) ?? Identity::anonymous()->withEmail($email));
+        $identity = $this->identityFor($email, $subscription);
 
         return new Access(
             identity: $identity,
@@ -107,6 +106,41 @@ class AccessResolver
             email: $identity->email ?: (is_string($user->email ?? null) ? $user->email : null),
             brandId: $this->brandId(),
         );
+    }
+
+    /**
+     * Wer hinter diesem Token steckt — und zwar derselbe Mensch wie beim
+     * Anmelden, nicht ein zweiter.
+     *
+     * Bis hierher wurde ein Token-Besuch immer als **Kontakt** aufgeloest,
+     * auch bei jemandem mit Konto. Das hatte zwei Folgen, und beide sind
+     * Fehler:
+     *
+     *  - `notification_preferences` haengt an (user_id, contact_uuid). Wer
+     *    ueber den Mail-Link etwas einstellte, schrieb in eine andere Zeile
+     *    als angemeldet — derselbe Mensch, zwei Einstellungssaetze, keiner
+     *    sah den anderen.
+     *  - Seit die Arten nach Zustaendigkeit gefiltert werden, verschwanden
+     *    damit auch alle Einstellungen, die ein Konto voraussetzen. Adrian
+     *    sah seine eigenen Community-Einstellungen nicht mehr, obwohl er ein
+     *    Konto hat — gefunden im Nutzertest mit seinem Account.
+     *
+     * Der Token beweist die Verfuegung ueber das Postfach, und ein Konto mit
+     * derselben Adresse gehoert derselben Person. Mehr darf dabei niemand:
+     * `canStoreNotificationPreferences()` haengt an `isIdentified()`, und das
+     * war ein Kontakt auch vorher schon.
+     */
+    protected function identityFor(string $email, object $subscription): Identity
+    {
+        $user = $email !== '' ? StatamicUser::findByEmail($email) : null;
+
+        if ($user !== null) {
+            return IdentityContext::resolve($user);
+        }
+
+        return $subscription->contact_uuid
+            ? Identity::contact((string) $subscription->contact_uuid, $email, $this->nameOf($subscription))
+            : ($this->contacts->byEmail($email) ?? Identity::anonymous()->withEmail($email));
     }
 
     protected function brandId(): int

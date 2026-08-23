@@ -20,6 +20,8 @@ abstract class TestCase extends OrchestraTestCase
     {
         parent::setUp();
 
+        $this->leereDateiNutzer();
+
         $this->loadMigrationsFrom(__DIR__.'/../vendor/goldnead/statamic-leadhub/database/migrations');
         $this->loadMigrationsFrom(__DIR__.'/../vendor/goldnead/statamic-marketing/database/migrations');
         $this->loadMigrationsFrom(__DIR__.'/../vendor/goldnead/statamic-notifications/database/migrations');
@@ -43,6 +45,36 @@ abstract class TestCase extends OrchestraTestCase
             \Goldnead\Notifications\ServiceProvider::class,
             \Goldnead\PreferenceCenter\ServiceProvider::class,
         ];
+    }
+
+    /**
+     * Statamic-Nutzer sind hier Dateien — und Dateien ueberleben den Testlauf.
+     *
+     * `statamic.users.repository` steht in dieser Suite auf `file`, und der
+     * Treiber schreibt echte YAML-Dateien nach
+     * vendor/orchestra/testbench-core/laravel/users. Die Datenbank wird
+     * zwischen den Tests zurueckgesetzt, diese Dateien nicht: ein Nutzer, den
+     * ein Test anlegt, existiert im naechsten Lauf immer noch.
+     *
+     * Das war lange folgenlos, weil kein Test Nutzer anlegte. Mit
+     * TokenFindsTheAccountTest aendert sich das — und ein liegengebliebener
+     * `jane@example.com` liess prompt drei fremde Tests umfallen, weil der
+     * Token-Eingang nun ein Konto fand, wo die Fixture keins vorsah.
+     *
+     * Ein Test, der von der Reihenfolge frueherer Laeufe abhaengt, prueft
+     * nicht mehr das, was in seinem Namen steht.
+     */
+    protected function leereDateiNutzer(): void
+    {
+        $verzeichnis = __DIR__.'/../vendor/orchestra/testbench-core/laravel/users';
+
+        if (! is_dir($verzeichnis)) {
+            return;
+        }
+
+        foreach (glob($verzeichnis.'/*.yaml') ?: [] as $datei) {
+            @unlink($datei);
+        }
     }
 
     protected function defineEnvironment($app): void
