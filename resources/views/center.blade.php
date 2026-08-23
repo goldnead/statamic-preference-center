@@ -193,6 +193,17 @@
                                         @endforeach
                                     </td>
                                     @foreach ($view->channels as $channel)
+                                        {{--
+                                            Eine Art, die diesen Kanal nicht kennt, bekommt eine
+                                            leere Zelle statt eines Kaestchens. Ein Kaestchen, das
+                                            man anklicken kann und das beim Versand ignoriert wird,
+                                            ist keine Einstellung, sondern ein Versprechen.
+                                        --}}
+                                        @if (! $row->supports($channel))
+                                            <td class="ch is-na" data-cell="{{ $row->type }}.{{ $channel }}" data-state="na"></td>
+                                            @continue
+                                        @endif
+
                                         <td class="ch"
                                             data-cell="{{ $row->type }}.{{ $channel }}"
                                             data-state="{{ $row->isLocked($channel) ? 'locked-'.($row->isEnabled($channel) ? 'on' : 'off') : ($row->isEnabled($channel) ? 'on' : 'off') }}"

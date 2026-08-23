@@ -23,6 +23,23 @@ final class TypeRow
         public readonly array $channels,
     ) {}
 
+    /**
+     * Kennt diese Art diesen Kanal ueberhaupt?
+     *
+     * Seit notifications 1.7 kann eine Art sagen, welche Kanaele sie
+     * unterstuetzt — eine Aufgabenzuweisung etwa keinen Digest, weil sie dort
+     * einen Tag alt waere. Die Matrix zeichnet ihre Spalten aber aus der
+     * globalen Kanalliste, und ohne diese Frage stuende in der Zeile ein
+     * Kaestchen fuer einen Weg, den es nicht gibt: anklickbar, gespeichert,
+     * und beim Versand wirkungslos.
+     *
+     * Genau die Sorte Bedienelement, die diese Reihe abschaffen soll.
+     */
+    public function supports(string $channel): bool
+    {
+        return array_key_exists($channel, $this->channels);
+    }
+
     public function isLocked(string $channel): bool
     {
         return (bool) ($this->channels[$channel]['locked'] ?? true);

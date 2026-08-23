@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.6.3 — 2026-08-23
+
+### Fixed — die Matrix zeichnete Kästchen für Kanäle, die es nicht gibt
+
+Die Spalten kommen aus der globalen Kanalliste, die Zeilen aus den Arten. Seit
+`goldnead/statamic-notifications` 1.7 kann eine Art sagen, welche Kanäle sie
+überhaupt führt — die Zeile fragte aber nicht danach und zeichnete für jede
+Spalte ein Kästchen.
+
+Auf der Produktion sichtbar an `crm.task_assigned`: die Art führt seit
+leadhub 2.5 keinen Digest mehr, in der Tabelle stand die Digest-Spalte
+trotzdem. Anklickbar, gespeichert, und beim Versand ignoriert.
+
+Genau die Sorte Bedienelement, die diese Reihe abschaffen sollte: ein
+Kästchen, das aussieht wie eine Wahl und keine ist.
+
+Eine Art ohne diesen Kanal bekommt jetzt eine leere Zelle. Wichtig dabei:
+„nicht vorhanden" und „aus" bleiben verschieden — ein ausgeschalteter Kanal
+ist eine Wahl, ein fehlender ist keine.
+
 ## 1.6.2 — 2026-08-23
 
 ### Fixed — ein Mensch, eine Einstellung, egal durch welche Tür
