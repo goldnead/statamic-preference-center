@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.0 — 2026-08-25
+
+### Fixed
+
+- **A person with an umlaut in their address could never reach their own preferences.** The magic
+  link form validated with `filter_var($email, FILTER_VALIDATE_EMAIL)`, which predates RFC 6531 and
+  rejects every non-ASCII character. `bärbel.öztürk@beispiel.de` — a contact in the CRM, a
+  subscriber on two lists, and someone whose token link works perfectly — was answered as unknown.
+
+  The failure had no symptom, and that is the point: this form answers the same neutral sentence to
+  everyone on purpose, so that nobody can use it to find out who is on a list. A rejected address is
+  therefore indistinguishable from an unknown one. The page the GDPR expects a person to be able to
+  reach was closed to them, silently, for as long as the check existed.
+
+  `EmailNormalizer::looksDeliverable()` now judges the domain through its punycode form and a
+  Unicode local part on its own terms, while still refusing what is genuinely undeliverable.
+
 ## 1.6.3 — 2026-08-23
 
 ### Fixed — die Matrix zeichnete Kästchen für Kanäle, die es nicht gibt

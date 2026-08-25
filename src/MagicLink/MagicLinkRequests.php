@@ -79,7 +79,9 @@ class MagicLinkRequests
 
         $email = EmailNormalizer::normalize($rawEmail);
 
-        if ($email === null || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Not filter_var: it rejects every non-ASCII address, and this family
+        // stores those as contacts. See EmailNormalizer::looksDeliverable().
+        if ($email === null || ! EmailNormalizer::looksDeliverable($email)) {
             return 'unknown';
         }
 
