@@ -62,7 +62,7 @@
             "description": "One page for lists, product notifications, cadence and blocks.",
             "url": "https://github.com/goldnead/statamic-preference-center",
             "developer": "Adrian Goldner",
-            "developer-url": "https://gldnr.studio"
+            "developer-url": "https://adriangoldner.dev"
         },
         "laravel": {
             "providers": [
