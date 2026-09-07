@@ -1,6 +1,7 @@
 <?php
 
 use Goldnead\PreferenceCenter\Identity\AccessResolver;
+use Statamic\Facades\User;
 
 /**
  * Ein Mensch, eine Einstellung — egal durch welche Tuer er kommt.
@@ -34,7 +35,7 @@ function loeseAuf(string $email, ?string $contactUuid): object
 }
 
 it('erkennt das Konto hinter einer Adresse', function (): void {
-    Statamic\Facades\User::make()->email('jane@example.com')->save();
+    User::make()->email('jane@example.com')->save();
 
     expect(loeseAuf('jane@example.com', 'c-1')->userId)->not->toBeNull();
 });
@@ -62,13 +63,13 @@ it('landet auf dem Konto, das zu genau dieser Adresse gehoert', function (): voi
      * eben lieferte. Ein Test, der daran haengt, prueft die Ablage, nicht die
      * Aufloesung.
      */
-    Statamic\Facades\User::make()->email('beides@example.com')->save();
+    User::make()->email('beides@example.com')->save();
 
     $identity = loeseAuf('beides@example.com', 'c-3');
 
     expect($identity->userId)->not->toBeNull();
 
-    $konto = Statamic\Facades\User::find($identity->userId);
+    $konto = User::find($identity->userId);
 
     expect($konto?->email())->toBe('beides@example.com');
 });

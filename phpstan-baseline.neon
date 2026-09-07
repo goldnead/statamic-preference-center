@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 18
-			path: config/preference-center.php
-
-		-
 			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, array\<string, int\|string\>\|null given\.$#'
 			identifier: argument.type
 			count: 1

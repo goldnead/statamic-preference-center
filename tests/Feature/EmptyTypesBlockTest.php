@@ -1,9 +1,9 @@
 <?php
 
+use Goldnead\IdentityContracts\Identity;
 use Goldnead\PreferenceCenter\Data\Access;
 use Goldnead\PreferenceCenter\Data\PreferenceView;
 use Goldnead\PreferenceCenter\Data\SuppressionState;
-use Goldnead\IdentityContracts\Identity;
 use Goldnead\PreferenceCenter\Proof;
 
 /**

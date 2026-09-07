@@ -10,6 +10,20 @@ parameters:
         - config
         - routes
 
+    # Larastans Regel noEnvCallsOutsideOfConfig misst gegen die config_path()
+    # der Anwendung, die es in einem Paket nicht gibt. Ohne diese Zeile gilt
+    # jeder env()-Aufruf in unserer eigenen config/preference-center.php als
+    # Aufruf aus Anwendungscode.
+    #
+    # Vorher stand das als Baseline-Eintrag mit "count: 18" da. Der hielt eine
+    # Anzahl fest statt einer Ursache und wurde rot, sobald ein Schluessel
+    # dazukam — zuletzt beim neunzehnten. Eine Zahl, die man hochzaehlt statt
+    # sie zu lesen, prueft nichts.
+    #
+    # Gleiche Loesung wie in statamic-identity-contracts.
+    configDirectories:
+        - config
+
     # A ratchet for new code, not a rewrite of what is here. The baseline holds
     # what the level found on the day it was switched on; anything new has to be
     # clean. Shrink the baseline when a file is touched anyway, never grow it.
