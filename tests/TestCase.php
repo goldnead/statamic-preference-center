@@ -11,6 +11,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Auth;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Statamic\Providers\StatamicServiceProvider;
+use Statamic\Statamic;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -21,6 +22,11 @@ abstract class TestCase extends OrchestraTestCase
         parent::setUp();
 
         $this->leereDateiNutzer();
+        $this->giveTestbenchAComposerLock();
+
+        // Das CP-Layout zieht Statamics eigenes Vite-Bundle, das in die
+        // Testbench-Anwendung nie veröffentlicht wird.
+        $this->withoutVite();
 
         $this->loadMigrationsFrom(__DIR__.'/../vendor/goldnead/statamic-leadhub/database/migrations');
         $this->loadMigrationsFrom(__DIR__.'/../vendor/goldnead/statamic-marketing/database/migrations');
@@ -36,6 +42,13 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app): array
     {
         return [
+            // Das Control Panel ist Inertia. Testbench entdeckt keine Pakete
+            // von selbst, und ohne diesen Provider fehlt das Makro
+            // `Request::inertia()` — jeder CP-Aufruf stirbt dann an einer
+            // Methode, die es in Wahrheit gibt. Gebraucht seit
+            // tests/Feature/SettingsTest.php, das über das echte
+            // CP-Formular speichert statt am Formular vorbei.
+            \Inertia\ServiceProvider::class,
             StatamicServiceProvider::class,
             \Goldnead\BrandContext\ServiceProvider::class,
             \Goldnead\IdentityContracts\ServiceProvider::class,
@@ -45,6 +58,19 @@ abstract class TestCase extends OrchestraTestCase
             \Goldnead\Notifications\ServiceProvider::class,
             \Goldnead\PreferenceCenter\ServiceProvider::class,
         ];
+    }
+
+    /**
+     * Die Blade-Ansichten des CP nennen die Fassade `Statamic` unqualifiziert.
+     * Testbench registriert keine Aliase von selbst, und ohne diesen stirbt
+     * jede CP-Ansicht an „Class Statamic not found" — in einer Ansicht des
+     * Cores, weit weg von dem, was der Test eigentlich prüft.
+     *
+     * @return array<string, class-string>
+     */
+    protected function getPackageAliases($app): array
+    {
+        return ['Statamic' => Statamic::class];
     }
 
     /**
@@ -164,6 +190,27 @@ abstract class TestCase extends OrchestraTestCase
     public const NAMES_A_SIBLING_MIGHT_USE = [
         'token', 'link', 'automation', 'rule', 'template', 'webhook', 'endpoint', 'handle', 'id', 'slug', 'record',
     ];
+
+    /**
+     * Statamics CP-Layout löst seine eigene Version aus
+     * `base_path('composer.lock')` auf und wirft ohne eine. Die
+     * Testbench-Anwendung hat keine, also leihen wir ihr unsere — sonst lässt
+     * sich in diesem Paket überhaupt keine CP-Ansicht in einem Test bauen.
+     */
+    protected function giveTestbenchAComposerLock(): void
+    {
+        $target = base_path('composer.lock');
+
+        if (file_exists($target)) {
+            return;
+        }
+
+        $source = __DIR__.'/../composer.lock';
+
+        if (file_exists($source)) {
+            @copy($source, $target);
+        }
+    }
 
     protected function enableMultiBrand(): void
     {
