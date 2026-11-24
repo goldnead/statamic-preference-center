@@ -44,6 +44,11 @@ if (! class_exists(SequenceOptOut::class)) {
 
 beforeEach(function () {
     $stub = SequenceOptOut::class;
+
+    if (! property_exists($stub, 'added')) {
+        $this->markTestSkipped('Das echte Automations-Addon ist installiert; der Stub gilt nicht.');
+    }
+
     $stub::$rows = [
         ['uuid' => 'seq-a', 'name' => 'Willkommen', 'opted_out' => false],
         ['uuid' => 'seq-b', 'name' => 'Einsingen', 'opted_out' => false],
@@ -82,4 +87,41 @@ it('beendet nur die Serie, deren Haken fehlt', function () {
     ])->assertOk();
 
     expect($stub::$added)->toBe(['seq-b']);
+});
+
+it('laesst Serien in Ruhe, wenn nur ein anderer Block gesendet wird', function () {
+    $stub = SequenceOptOut::class;
+
+    $this->followingRedirects()->post(route('preference-center.token.update', $this->token), [
+        'action' => 'save',
+        'blocks' => ['lists'],
+        'lists' => ['newsletter'],
+    ])->assertOk();
+
+    expect($stub::$added)->toBe([])->and($stub::$removed)->toBe([]);
+});
+
+it('nimmt eine verlassene Serie wieder auf, wenn sie angekreuzt wird', function () {
+    $stub = SequenceOptOut::class;
+    $stub::$rows[1]['opted_out'] = true;
+
+    $this->followingRedirects()->post(route('preference-center.token.update', $this->token), [
+        'action' => 'save',
+        'blocks' => ['sequences'],
+        'sequences' => ['seq-a', 'seq-b'],
+    ])->assertOk();
+
+    expect($stub::$removed)->toBe(['seq-b'])->and($stub::$added)->toBe([]);
+});
+
+it('weist ein Serienfeld ab, das kein Array von Zeichenketten ist', function () {
+    $stub = SequenceOptOut::class;
+
+    $this->post(route('preference-center.token.update', $this->token), [
+        'action' => 'save',
+        'blocks' => ['sequences'],
+        'sequences' => 'seq-a',
+    ])->assertSessionHasErrors('sequences');
+
+    expect($stub::$added)->toBe([]);
 });
