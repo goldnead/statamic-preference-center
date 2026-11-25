@@ -15,6 +15,24 @@
 
 - No migration, no new config key.
 
+## 1.8.0 — 2026-09-07
+
+### Added
+
+- **Settings on the shared brand settings page.** The package has no control panel of its own (four public addresses, nothing else), so every value an operator could only set in `.env` was unreachable from the CP: link lifetime, throttling, sender identity, audit trail. `goldnead/statamic-brand-context` now renders these as a section, registered through `SettingsRegistry` in the service provider. The field list lives in `Support/Settings`, and the matching permission is registered for the `preference-center` group. Three sources (notifications, sequences, suppression) are selectable there. `sources.marketing` is not offered, because `routes/web.php` reads it to decide whether the token route exists at all.
+- Marketplace thumbnail (600x600), rendered from the same `icon.svg` as the other sizes, for the Statamic listing.
+
+### Changed
+
+- `goldnead/statamic-brand-context` is now required at `^1.13` (was `^1.8`). Under 1.12, a second save of the same section silently dropped the override from the first.
+- The `developer-url` in `composer.json` now points to `https://adriangoldner.dev` (was `https://gldnr.studio`).
+- Lint: the `env()` rule in PHPStan now reads the config directories through its own parameter instead of a baseline entry that pinned a count (`18`, now 19 calls). The baseline entry is removed. Two Pint findings in `tests/Feature` are fixed, which had been aborting the lint job before PHPStan ran.
+
+### Upgrading
+
+- Requires `goldnead/statamic-brand-context` `^1.13`; run `composer update goldnead/statamic-brand-context`.
+- No migration, no new config key.
+
 ## 1.7.0 — 2026-08-25
 
 ### Fixed
