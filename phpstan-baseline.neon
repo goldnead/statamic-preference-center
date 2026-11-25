@@ -13,25 +13,19 @@ parameters:
 			path: src/Http/Controllers/PreferenceCenterController.php
 
 		-
-			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Identity/ContactLookup.php
-
-		-
 			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$full_name\.$#'
 			identifier: property.notFound
 			count: 1
 			path: src/Identity/ContactLookup.php
 
 		-
-			message: '#^Access to an undefined property Goldnead\\Leadhub\\Models\\Contact\:\:\$uuid\.$#'
-			identifier: property.notFound
+			message: '#^Parameter \#1 \$view of method Illuminate\\Mail\\Mailable\:\:view\(\) expects view\-string, string given\.$#'
+			identifier: argument.type
 			count: 1
-			path: src/Identity/ContactLookup.php
+			path: src/MagicLink/MagicLinkMail.php
 
 		-
-			message: '#^Parameter \#1 \$view of method Illuminate\\Mail\\Mailable\:\:view\(\) expects view\-string, string given\.$#'
+			message: '#^Parameter \#1 \$textView of method Illuminate\\Mail\\Mailable\:\:text\(\) expects view\-string, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/MagicLink/MagicLinkMail.php
