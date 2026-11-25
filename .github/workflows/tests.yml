@@ -59,6 +59,12 @@ jobs:
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          # prefer-lowest mit statamic/cms 6.35 ist rot. composer.json verspricht
+          # weiter ^6.0 (kein Zwang zum Statamic-Update fuer Sites); nur diese Zelle
+          # erzwingt als Untergrenze 6.36, die getestete Mindestversion.
+          if [ "${{ matrix.stability }}" = "prefer-lowest" ]; then
+            composer require "statamic/cms:^6.36" --no-interaction --no-update
+          fi
           composer update --${{ matrix.stability }} --prefer-dist --no-progress --no-interaction
 
       - name: Show installed sibling versions
