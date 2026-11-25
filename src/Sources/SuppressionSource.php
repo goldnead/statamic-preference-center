@@ -5,6 +5,7 @@ namespace Goldnead\PreferenceCenter\Sources;
 use Goldnead\PreferenceCenter\Data\SuppressionState;
 use Goldnead\Suppression\Contracts\Gate;
 use Goldnead\Suppression\Exceptions\SuppressionCheckFailed;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The block state, from `goldnead/statamic-suppression`.
@@ -58,7 +59,13 @@ class SuppressionSource extends Source
             }
 
             // Fail closed. Not an error state shown to the visitor as a
-            // shrug — the closed answer, with the page saying so.
+            // shrug — the closed answer, with the page saying so. The log says
+            // it too, because the page alone cannot tell an operator why an
+            // address reads as blocked.
+            Log::warning('preference-center.suppression.unavailable', [
+                'exception' => $e::class,
+            ]);
+
             return new SuppressionState(installed: true, blocked: false, unavailable: true);
         }
     }
