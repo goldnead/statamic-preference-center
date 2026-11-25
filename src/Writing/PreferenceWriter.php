@@ -44,12 +44,18 @@ class PreferenceWriter
         // every optional mail-bearing cell, then the matrix writes the cells
         // this submission actually changed. Last write wins, and the last write
         // is the specific one. See `saveTypes()`.
-        $this->saveLists($access, $view, $result, $input['lists'] ?? null);
-        $this->saveFrequency($access, $view, $result, $input['frequency'] ?? null);
-        $this->saveTypes($access, $view, $result, $input['types'] ?? null);
-        $this->saveSequences($access, $view, $result, $input['sequences'] ?? null);
-
-        $this->announce($access, $result);
+        // There is no shared transaction across the sources, so a write that
+        // fails part-way leaves the earlier ones stored. The announce runs in
+        // `finally` so that whatever did get stored is still recorded with its
+        // proof; the failure itself is not swallowed.
+        try {
+            $this->saveLists($access, $view, $result, $input['lists'] ?? null);
+            $this->saveFrequency($access, $view, $result, $input['frequency'] ?? null);
+            $this->saveTypes($access, $view, $result, $input['types'] ?? null);
+            $this->saveSequences($access, $view, $result, $input['sequences'] ?? null);
+        } finally {
+            $this->announce($access, $result);
+        }
 
         return $result;
     }

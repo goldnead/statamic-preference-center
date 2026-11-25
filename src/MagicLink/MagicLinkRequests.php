@@ -141,7 +141,16 @@ class MagicLinkRequests
         foreach ($links as $link) {
             if ($this->mailer()->send($link['brand_id'], $email, null, new MagicLinkMail([$link]))) {
                 $sent++;
+
+                continue;
             }
+
+            // The visitor still reads the neutral page: the log is where the
+            // refusal becomes visible. The address stays out of it.
+            Log::warning(
+                'preference-center.magic_link.not_sent',
+                ['brand_id' => $link['brand_id'], 'reason' => 'sender_refused'],
+            );
         }
 
         return $sent > 0 ? 'sent' : 'misconfigured';

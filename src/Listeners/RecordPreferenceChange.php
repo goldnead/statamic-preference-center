@@ -53,23 +53,36 @@ class RecordPreferenceChange
         // `payload` is redacted by LeadHub on any key whose name contains
         // `token` or `secret`. `consent_proof` survives that; its *value* may be
         // the string `unsubscribe_token`, which is a word, not a token.
-        (self::LEADHUB)::ingest([
-            'email' => $event->access->email,
-            'type' => 'preference_center.changed',
-            'summary' => trans_choice(
-                'preference-center::audit.summary',
-                count($event->changes),
-                ['count' => count($event->changes), 'proof' => $event->consentProof()],
-            ),
-            'source_type' => 'preference-center',
-            'source_id' => $event->consentProof(),
-            'dedupe_key' => 'preference-center:'.hash('sha256', json_encode([
-                $event->access->brandId,
-                $event->access->email,
-                $event->changes,
-                (int) floor(microtime(true) * 1000),
-            ])),
-            'payload' => $payload,
-        ]);
+        // The change is already stored when this runs. A failing audit write
+        // must not turn that into a 500: the visitor gets the success they
+        // earned, and the failure goes to the report and the log, without the
+        // address.
+        try {
+            (self::LEADHUB)::ingest([
+                'email' => $event->access->email,
+                'type' => 'preference_center.changed',
+                'summary' => trans_choice(
+                    'preference-center::audit.summary',
+                    count($event->changes),
+                    ['count' => count($event->changes), 'proof' => $event->consentProof()],
+                ),
+                'source_type' => 'preference-center',
+                'source_id' => $event->consentProof(),
+                'dedupe_key' => 'preference-center:'.hash('sha256', json_encode([
+                    $event->access->brandId,
+                    $event->access->email,
+                    $event->changes,
+                    (int) floor(microtime(true) * 1000),
+                ])),
+                'payload' => $payload,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            Log::channel(config('preference-center.audit.log_channel'))->error(
+                'preference-center.audit.failed',
+                ['brand_id' => $event->access->brandId, 'exception' => $e::class],
+            );
+        }
     }
 }
