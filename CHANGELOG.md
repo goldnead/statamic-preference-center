@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.8.1 — 2026-11-25
+
+### Fixed
+
+- **Saving the preference page no longer unsubscribes a person from every automation sequence.** `sequences` was not validated, so the validated input never contained it, the form's `sequences` marker counted as "sent with an empty wish list", and `SequencesSource::apply()` unsubscribed every active sequence. `sequences` and `sequences.*` are now validated. People who were unsubscribed by the gap before stay unsubscribed (no backfill).
+- Failures are no longer silent: a failing `LeadHub::ingest` after a saved change no longer answers 500 (it is reported and logged with class and brand id, no address); a refused magic-link send is logged as `preference-center.magic_link.not_sent` (no address, the answer stays neutral); an unreachable suppression gate logs a warning and still fails closed; a link session that remembers a brand that no longer exists logs a warning with the `brand_id`.
+
+### Changed
+
+- CI only: the prefer-lowest cell requires `statamic/cms ^6.36` in the workflow. `composer.json` keeps `^6.0`, so updating the addon pulls no Statamic update.
+
+### Upgrading
+
+- No migration, no new config key.
+
 ## 1.7.0 — 2026-08-25
 
 ### Fixed
