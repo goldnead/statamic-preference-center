@@ -2,15 +2,19 @@
 
 use Goldnead\Leadhub\Facades\LeadHub;
 use Goldnead\Marketing\Models\Subscription;
+use Goldnead\PreferenceCenter\Http\Middleware\SetBrandFromLinkSession;
+use Goldnead\PreferenceCenter\Http\SessionAccess;
 use Goldnead\PreferenceCenter\MagicLink\MagicLinkRequests;
 use Goldnead\PreferenceCenter\Sending\BrandMailer;
 use Goldnead\PreferenceCenter\Sources\SuppressionSource;
 use Goldnead\PreferenceCenter\Tests\Fixtures\World;
 use Goldnead\Suppression\Contracts\Gate;
 use Goldnead\Suppression\Exceptions\SuppressionCheckFailed;
+use Illuminate\Http\Request;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Failures that used to vanish without a trace.
@@ -98,5 +102,23 @@ it('logs once when the suppression gate cannot be reached', function () {
 
     $this->channel->shouldHaveReceived('warning')
         ->withArgs(fn (string $message) => str_contains($message, 'suppression'))
+        ->once();
+});
+
+it('logs when the brand remembered in the link session no longer exists', function () {
+    $manager = Mockery::mock(app('brand-context'));
+    $manager->shouldReceive('multiBrandEnabled')->andReturnTrue();
+    $this->app->instance('brand-context', $manager);
+
+    $request = Request::create('/preference-center/link', 'GET');
+    $request->setLaravelSession(app('session.store'));
+    $request->session()->put(SessionAccess::BRAND, 999999);
+
+    (new SetBrandFromLinkSession)
+        ->handle($request, fn () => new Response);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []) => str_contains($message, 'brand')
+            && ($context['brand_id'] ?? null) === 999999)
         ->once();
 });

@@ -6,6 +6,7 @@ use Closure;
 use Goldnead\BrandContext\Models\Brand;
 use Goldnead\PreferenceCenter\Http\SessionAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -40,6 +41,10 @@ class SetBrandFromLinkSession
 
         if ($brand !== null) {
             $manager->setCurrent($brand);
+        } else {
+            Log::warning('preference-center: the brand remembered in the link session no longer exists.', [
+                'brand_id' => (int) $brandId,
+            ]);
         }
 
         return $next($request);
