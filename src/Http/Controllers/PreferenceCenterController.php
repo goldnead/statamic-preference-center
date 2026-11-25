@@ -95,6 +95,8 @@ class PreferenceCenterController extends Controller
             'types.*' => ['array'],
             'types.*.*' => ['string', 'max:8'],
             'frequency' => ['nullable', 'string', 'max:32'],
+            'sequences' => ['array'],
+            'sequences.*' => ['string', 'max:64'],
         ]);
 
         if (($data['action'] ?? 'save') === 'unsubscribe_all') {
